@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+
+# Secrets & local config
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+service-account*.json
+
+# Data — real bank statements and databases never go to git
+data/private/
+*.csv
+!tests/fixtures/**/*.csv
+!seed/**/*.csv
+*.db
+*.sqlite
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
