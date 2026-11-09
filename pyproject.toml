@@ -1,0 +1,72 @@
+[project]
+name = "expensior"
+version = "0.1.0.dev0"
+description = "Personal finance app: import bank statements, classify transactions, see where the money goes"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic-settings>=2.16.2",
+]
+
+[project.scripts]
+expensior = "expensior.cli.main:main"
+
+[build-system]
+requires = ["uv_build>=0.13.0,<0.14.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "detect-secrets>=1.5.0",
+    "import-linter>=2.16",
+    "mypy>=2.4.1",
+    "pre-commit>=4.7.0",
+    "pytest>=9.2.0",
+    "ruff>=0.17.4",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["src", "tests"]
+plugins = ["pydantic.mypy"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+markers = ["db: tests that need a Postgres database (from stage 1)"]
+
+# Layer rules of ADR 0009. Add `expensior.ui` to the contracts when that package is created,
+# and the third-party contracts (e.g. domain must not import sqlalchemy) when stage 1 installs SQLAlchemy.
+[tool.importlinter]
+root_package = "expensior"
+
+[[tool.importlinter.contracts]]
+name = "Layers point one way: cli -> services -> db -> domain"
+type = "layers"
+layers = [
+    "expensior.cli",
+    "expensior.services",
+    "expensior.db",
+    "expensior.domain",
+]
+
+[[tool.importlinter.contracts]]
+name = "cli never imports db directly"
+type = "forbidden"
+source_modules = ["expensior.cli"]
+forbidden_modules = ["expensior.db"]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "domain never imports config"
+type = "forbidden"
+source_modules = ["expensior.domain"]
+forbidden_modules = ["expensior.config"]
