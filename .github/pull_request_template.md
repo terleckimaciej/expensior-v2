@@ -1,12 +1,10 @@
-Closes #
+Why:
 
-## What changed
+What:
+-
 
-## Why
-
-## Verification
-
-- `uv run pytest`:
-- `uv run ruff check` / `uv run mypy`:
+Verification:
+- uv run pytest:
 - By hand:
-- [ ] No production data in this description, in logs or in fixtures
+
+Closes #
