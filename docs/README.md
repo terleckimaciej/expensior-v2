@@ -3,6 +3,10 @@
 Everything decided, researched or learned about expensior-v2 lives here, in git, so it survives
 context resets (human and AI).
 
+## Plan
+
+- [Plan — direction and build order](plan.md) (no status; open work is in GitHub issues)
+
 ## Decisions (`decisions/`)
 
 | ADR | Title | Status |
