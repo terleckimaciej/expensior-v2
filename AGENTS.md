@@ -31,7 +31,10 @@ Rules:
   If a task seems to need it, stop and say so.
 - Prices and quotas go stale. Before relying on a number in `docs/research/`, check its date;
   if older than ~3 months, re-verify at the linked source and update the note.
-- When a decision is made in conversation, write it down as an ADR (use `docs/decisions/0000-template.md`).
+- When a decision is made in conversation, write it down as an ADR (use `docs/decisions/0000-template.md`)
+  and add a row to the table in `docs/README.md`.
+- Do not rewrite accepted ADRs. A changed decision is a new ADR with `Accepted, supersedes NNNN`, and the old
+  one gets `Superseded by NNNN`. Non-substantive fixes (an outdated phrase, a broken link) are fine.
 
 ## Architecture at a glance (see ADRs for the why)
 
@@ -58,12 +61,56 @@ Rules:
 - Admin/CLI commands that write to a database print the target host and ask for confirmation.
 - Conventional Commits (`feat:`, `fix:`, `docs:` …). Small PRs.
 
-## Git and GitHub — the owner does it, not agents
+## Workflow
 
-- Never commit, push, create/switch/rename/delete branches, rebase, reset, tag, or open PRs.
-  Leave all changes uncommitted in the working tree.
-- The owner handles version control themselves, their own way (feature branch → PR into `master`).
-- When work is ready, say so and suggest a Conventional Commit message — do not run it.
+- **Open work lives in GitHub issues, and a GitHub Project is the status view** ([ADR 0008](docs/decisions/0008-open-work-in-github-issues.md)).
+  Start from `gh issue list`. A milestone is a release; labels are `enhancement` (planned), `idea` (a proposal,
+  not planned), `bug`, `research`. Project statuses: Backlog → Ready → In progress → Done; *Ready* means the
+  issue has Context, Plan, Tasks and Done when filled in.
+- **Docs carry no status.** Never add checklists or "done" markers to them; progress is visible only in issues,
+  the Project, milestones and merged pull requests. (An ADR's status describes a decision, not progress.)
+- **Work starts from an issue.** Read it first (`gh issue view N`); its Tasks and Done when are the scope.
+  A pull request that finishes it says `Closes #N` in its description. Small docs/chore changes (a typo, a
+  broken link, formatting) may skip the issue; the PR then has no `Closes #` line.
+- **Keep the issue in sync with the work.** When a decision changes the scope, propose a ready-to-paste
+  `gh issue edit` that updates its Tasks. Before the pull request, propose ticking the finished tasks; anything
+  done differently from the issue goes into a closing comment and into the PR description.
+- **New work becomes an issue, not a note in the docs.** Propose a ready-to-paste `gh issue create` following the
+  templates in `.github/ISSUE_TEMPLATE/` (feature: Context, Plan, Tasks, Done when; idea: Context, Proposal,
+  Open questions). A time-boxed investigation is a `feature` issue labelled `research` whose Done when is
+  "the answer is recorded in an ADR or a research note".
+- **Docs change together with the code.** A pull request that changes behaviour updates the docs it affects;
+  one that makes a decision adds an ADR in the same pull request.
+- **Language:** everything committed is in English (code, comments, docs, commit messages, PR text);
+  explanations to the owner in the chat are in Polish.
+
+## Git and GitHub — the owner runs it, not agents
+
+- Never run anything that writes to git or GitHub: `git add`, `commit`, `push`, creating/switching/renaming/
+  deleting branches, rebase, reset, tag, `gh pr create`/`merge`, `gh issue create`/`edit`/`close`/`comment`,
+  and changes to milestones, labels or the Project. Leave all changes uncommitted in the working tree.
+- Read-only commands are fine: `git status`/`diff`/`log`, `gh issue list`/`view`, `gh pr view`.
+- Instead, propose ready-to-paste commands together with the commit message and the PR title/description,
+  so the owner can adjust them before running.
+- Flow: a branch named `<type>/<short-description>` (e.g. `feat/import-pko-csv`) → pull request into `master`.
+  Never commit directly to `master`.
+- When work is ready, say so and propose the commit message — do not run it.
+
+## Commits and pull requests
+
+- [Conventional Commits](https://www.conventionalcommits.org/): `type: description` or `type(scope): description`.
+  - Types: `feat`, `fix`, `refactor`, `perf`, `test`, `docs`, `build` (packaging, dependencies, uv), `ci`, `chore`.
+  - Scope is optional; use it only when it adds information (a layer such as `import`, `rules`, `ui`, `db`).
+    Omit it for cross-cutting changes.
+  - Description: imperative mood, lowercase, no trailing period, about 72 characters at most.
+    Mark breaking changes with `!` (e.g. `feat(db)!: …`).
+- **No AI attribution:** no `Co-Authored-By` and no "Generated with" lines in commit messages or PR descriptions.
+- **Merging:** squash by default, so the PR title becomes the commit on `master` — it uses the same format and
+  stays within ~72 characters (GitHub appends `(#N)`). Use a merge commit or "rebase and merge" when the PR holds
+  several distinct commits worth keeping (e.g. a refactor separate from the feature); then *every* commit must
+  follow the format.
+- The PR description says what changed, why, and how it was verified (template in
+  `.github/pull_request_template.md`), and `Closes #N`.
 
 ## Things that are easy to get wrong
 

@@ -78,7 +78,7 @@ Facts behind this: [`research/ui-frameworks-2026-11.md`](../research/ui-framewor
     **not settled by the Google docs** and must be measured in the spike; this is the decisive risk, not a detail.
   - NiceGUI is a smaller project than the big JS ecosystems; if it stalls, the thin-UI rule limits the damage.
 - Follow-ups:
-  - Run the spike (backlog item in [`domain/backlog.md`](../domain/backlog.md)); then move this ADR to
+  - Run the spike (tracked as a GitHub issue); then move this ADR to
     Accepted (NiceGUI) or Superseded (Plan B / Streamlit).
   - If NiceGUI is kept: decide the chart library and whether bulk edit uses a modal or inline mode.
   - [`specs/keyboard-ux.md`](../specs/keyboard-ux.md) stays stale until/unless keyboard navigation returns.
