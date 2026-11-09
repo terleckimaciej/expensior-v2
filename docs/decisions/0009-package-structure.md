@@ -1,6 +1,6 @@
 # 0009: Code structure — a `src/` package in layers with one-way dependencies
 
-- **Status:** Proposed — for the owner's review before the skeleton (stage 0 in [`plan.md`](../plan.md)) is built
+- **Status:** Accepted — after the owner's review and the stage 0 skeleton; to be re-checked after stage 2
 - **Date:** 2026-11-09
 
 ## Context
@@ -196,9 +196,9 @@ container in CI), including the SQL views. `tests/cli/` — thin. Fixtures are s
   - A layered structure means a use case touches several packages; a small feature is several small edits.
   - View SQL in migrations is outside mypy and ruff (already accepted in ADR 0007).
 - Open — to settle when the code exists, not now:
-  - CLI library (stdlib `argparse` or Typer).
+  - CLI library: the skeleton uses stdlib `argparse`; revisit if the commands multiply.
   - How the unit of work is spelled (a context manager on a session, or an explicit object).
   - What `reprocess_batch` does when a corrected parser derives a different `transaction_id`.
-  - Whether import-linter ships with the skeleton or arrives with the first cross-layer code.
 - Follow-ups: the module tables and the three diagrams are the raw material for `docs/architecture.md`, to be
-  written once the first stages exist. Accept this ADR after the review, and again after stage 2 shows how it holds.
+  written once the first stages exist. Re-check this ADR after stage 2 shows how it holds. The layer rules are
+  enforced from the skeleton on by the import-linter contracts in `pyproject.toml`.

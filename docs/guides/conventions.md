@@ -30,7 +30,7 @@ Items marked **(under review)** are not settled — see the list at the bottom b
 
 ## Code structure
 
-**(proposed, under review)** — `src/expensior/` in layers `domain`, `db`, `services`, `cli`, `ui`, with
+`src/expensior/` in layers `domain`, `db`, `services`, `cli`, `ui`, with
 dependencies pointing one way toward a pure `domain`; full description, rules and diagrams in
 [ADR 0009](../decisions/0009-package-structure.md). It builds on the raw landing stage and SQL-owned aggregates
 of [ADR 0007](../decisions/0007-transformations-elt-in-postgres.md).
@@ -52,4 +52,3 @@ Settled: pure domain logic with no I/O stays separate from storage, and `alembic
 | DB stack | Are SQLAlchemy 2.0 + psycopg 3 + Alembic the right choices? Inherited from `menu_delivery`, not yet argued for this app — and [ADR 0007](../decisions/0007-transformations-elt-in-postgres.md) puts more weight on raw SQL than an ORM-first design assumes |
 | UI stack | NiceGUI is the default for the start; confirm it with the spike (what an idle open tab costs against scale-to-zero, editable table, cold start) or switch to plan B — see [ADR 0003](../decisions/0003-ui-keyboard-first-htmx.md) |
 | CLI access to production | Whether a one-off env override is an acceptable mechanism at all |
-| Code structure | Proposed in [ADR 0009](../decisions/0009-package-structure.md); to be confirmed in the owner's review |
