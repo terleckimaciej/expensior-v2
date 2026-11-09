@@ -105,12 +105,18 @@ Rules:
   - Description: imperative mood, lowercase, no trailing period, about 72 characters at most.
     Mark breaking changes with `!` (e.g. `feat(db)!: …`).
 - **No AI attribution:** no `Co-Authored-By` and no "Generated with" lines in commit messages or PR descriptions.
-- **Merging:** squash by default, so the PR title becomes the commit on `master` — it uses the same format and
-  stays within ~72 characters (GitHub appends `(#N)`). Use a merge commit or "rebase and merge" when the PR holds
-  several distinct commits worth keeping (e.g. a refactor separate from the feature); then *every* commit must
-  follow the format.
-- The PR description says what changed, why, and how it was verified (template in
-  `.github/pull_request_template.md`), and `Closes #N`.
+- **Merging:** squash by default. The repo is set so the squash commit takes the PR **title** and the PR
+  **description** (`squash_merge_commit_title=PR_TITLE`, `squash_merge_commit_message=PR_BODY`), so the PR is the
+  one place to write them carefully. Commits on the branch are scratch and disappear in the squash. Use "rebase
+  and merge" (or a merge commit) only when the PR holds several distinct commits worth keeping (e.g. a refactor
+  separate from the feature); then *every* commit must follow the format and carry its own description, and the
+  PR description does not reach git.
+- **PR title:** the same format as a commit, about 72 characters at most (GitHub appends `(#N)`).
+- **PR description** lands verbatim in the commit body on `master`, so write it as plain text: no markdown
+  headings and no checkboxes (git drops lines starting with `#` when a message is edited in an editor). Follow
+  the template in `.github/pull_request_template.md`: `Why:` first — the reason is what someone reading
+  `git log` looks for — then `What:`, `Verification:`, and `Closes #N`. No "next steps": plans belong in issues,
+  a commit records what happened. Fix the description before merging, not after.
 
 ## Things that are easy to get wrong
 
