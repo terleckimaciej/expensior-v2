@@ -37,8 +37,6 @@ Finer-grained progress is the Project's job, not the milestone's. Milestones liv
 
 - **Before stage 2:** accept or amend [ADR 0007](decisions/0007-transformations-elt-in-postgres.md) — the import
   design stands on it.
-- **Before stage 0:** confirm the code structure proposed in [ADR 0009](decisions/0009-package-structure.md)
-  (a `src/expensior/` package in layers, with `alembic/`, `tests/`, `infra/` and `docs/` at the repository root).
 - **Before stage 6:** the UI framework. [ADR 0003](decisions/0003-ui-keyboard-first-htmx.md) makes NiceGUI the
   default, with the cost of an open WebSocket tab on Cloud Run to be measured (tracked as a GitHub issue); plan B
   is a Vue 3 + Vite SPA.

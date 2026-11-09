@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: pre-commit + pytest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      # --locked fails when uv.lock is out of date with pyproject.toml.
+      - run: uv sync --locked
+      # ruff, mypy, import-linter (ADR 0009 layers), detect-secrets, file hygiene.
+      - run: uv run pre-commit run --all-files
+      - run: uv run pytest
+
+  # Single required status check for branch protection: green only if every job above passed.
+  # New jobs (e.g. tests that need Postgres, from stage 1) are added to `needs`.
+  ci:
+    if: always()
+    needs: [checks]
+    runs-on: ubuntu-latest
+    steps:
+      - run: test "${{ needs.checks.result }}" = success
