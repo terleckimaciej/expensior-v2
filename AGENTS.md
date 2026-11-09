@@ -87,14 +87,17 @@ Rules:
 - **Language:** everything committed is in English (code, comments, docs, commit messages, PR text);
   explanations to the owner in the chat are in Polish.
 
-## Git and GitHub — the owner runs it, not agents
+## Git, GitHub and Docker — the owner runs it, not agents
 
 - Never run anything that writes to git or GitHub: `git add`, `commit`, `push`, creating/switching/renaming/
   deleting branches, rebase, reset, tag, `gh pr create`/`merge`, `gh issue create`/`edit`/`close`/`comment`,
   and changes to milestones, labels or the Project. Leave all changes uncommitted in the working tree.
 - Read-only commands are fine: `git status`/`diff`/`log`, `gh issue list`/`view`, `gh pr view`.
-- Instead, propose ready-to-paste commands together with the commit message and the PR title/description,
-  so the owner can adjust them before running.
+- Never run `docker` or `docker compose` (up, down, exec, ps, pull, ...), not even read-only ones. Once the owner
+  says the database is up, running `pytest` or `alembic` against `localhost` is fine.
+- Instead, propose the commands for the owner to type: one block, with a `#` comment above each command saying
+  what it does and why, plus the commit message and the PR title/description where they apply, so the owner
+  can adjust them before running.
 - Flow: a branch named `<type>/<short-description>` (e.g. `feat/import-pko-csv`) → pull request into `master`.
   Never commit directly to `master`.
 - When work is ready, say so and propose the commit message — do not run it.

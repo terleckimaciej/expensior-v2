@@ -22,13 +22,40 @@ jobs:
       - run: uv sync --locked
       # ruff, mypy, import-linter (ADR 0009 layers), detect-secrets, file hygiene.
       - run: uv run pre-commit run --all-files
-      - run: uv run pytest
+      - run: uv run pytest -m "not db"
+
+  tests-db:
+    name: database tests
+    runs-on: ubuntu-latest
+    services:
+      # The tests expect Postgres on localhost:5432 with these credentials (see tests/conftest.py).
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: expensior
+          POSTGRES_PASSWORD: expensior  # pragma: allowlist secret
+        ports:
+          - "5432:5432"
+        options: >-
+          --health-cmd "pg_isready -U expensior"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --locked
+      # CI is set on GitHub Actions, so a missing database fails here instead of skipping.
+      - run: uv run pytest -m db
 
   # Single required status check for branch protection: green only if every job above passed.
-  # New jobs (e.g. tests that need Postgres, from stage 1) are added to `needs`.
+  # New jobs are added to `needs`.
   ci:
     if: always()
-    needs: [checks]
+    needs: [checks, tests-db]
     runs-on: ubuntu-latest
     steps:
-      - run: test "${{ needs.checks.result }}" = success
+      - run: test "${{ needs.checks.result }}" = success && test "${{ needs.tests-db.result }}" = success

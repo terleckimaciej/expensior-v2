@@ -5,7 +5,10 @@ description = "Personal finance app: import bank statements, classify transactio
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "alembic>=1.20.1",
+    "psycopg[binary]>=3.3.8",
     "pydantic-settings>=2.16.2",
+    "sqlalchemy>=2.1.8",
 ]
 
 [project.scripts]
@@ -32,6 +35,14 @@ target-version = "py312"
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
 
+[tool.ruff.lint.isort]
+# The repo has an `alembic/` directory, which ruff would otherwise take for first-party code.
+known-third-party = ["alembic"]
+
+[tool.ruff.lint.per-file-ignores]
+# Migrations inline the SQL of views (ADR 0007), so long lines are expected there.
+"alembic/versions/*" = ["E501"]
+
 [tool.mypy]
 python_version = "3.12"
 strict = true
@@ -43,10 +54,11 @@ testpaths = ["tests"]
 addopts = "-ra"
 markers = ["db: tests that need a Postgres database (from stage 1)"]
 
-# Layer rules of ADR 0009. Add `expensior.ui` to the contracts when that package is created,
-# and the third-party contracts (e.g. domain must not import sqlalchemy) when stage 1 installs SQLAlchemy.
+# Layer rules of ADR 0009. Add `expensior.ui` to the contracts when that package is created.
+# `include_external_packages` lets a contract name third-party packages such as sqlalchemy.
 [tool.importlinter]
 root_package = "expensior"
+include_external_packages = true
 
 [[tool.importlinter.contracts]]
 name = "Layers point one way: cli -> services -> db -> domain"
@@ -70,3 +82,9 @@ name = "domain never imports config"
 type = "forbidden"
 source_modules = ["expensior.domain"]
 forbidden_modules = ["expensior.config"]
+
+[[tool.importlinter.contracts]]
+name = "domain never imports sqlalchemy"
+type = "forbidden"
+source_modules = ["expensior.domain"]
+forbidden_modules = ["sqlalchemy"]
