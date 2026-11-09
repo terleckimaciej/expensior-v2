@@ -21,11 +21,12 @@ The owner uses dbt at work, so the question is whether it belongs here. See also
 ## Decision
 
 **Land raw first, and make "raw" the original file.** An import has three layers, each derived from the one
-before and none rewritten afterwards:
+before. Layer 0 is immutable; layers 1 and 2 can be rebuilt from it:
 
 0. **The file.** The original bytes (`bytea`) plus `sha256`, file name and size, stored on the import batch
    together with `source` (e.g. `pko_bp`) and `format_version`. This is written **first, before anything is
-   parsed**, so a statement is never lost — even when the parser cannot read it.
+   parsed**, and committed in its own transaction, so a statement is never lost — even when the parser cannot
+   read it. (A dry run writes nothing at all.)
 1. **Raw rows.** One row per line of the file: `batch_id`, line number, and the cells as `jsonb` keyed by the
    file's own header (the header is kept on the batch), as text, with no interpretation. Keyed cells, not
    fixed columns, so a column the bank adds or renames does not break the landing step.

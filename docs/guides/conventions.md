@@ -7,7 +7,7 @@ Items marked **(under review)** are not settled — see the list at the bottom b
 
 | Concern | Tool |
 |---|---|
-| Python / deps | Python 3.12+, uv (`uv sync`, `uv run`) — a deliberate step up from Poetry, which `menu_delivery` uses. Flat layout, no `src/` |
+| Python / deps | Python 3.12+, uv (`uv sync`, `uv run`) — a deliberate step up from Poetry, which `menu_delivery` uses. `src/` layout, as in `menu_delivery` ([ADR 0009](../decisions/0009-package-structure.md)) |
 | Config | `pydantic-settings`, `.env` locally (gitignored), `.env.example` committed |
 | DB | SQLAlchemy 2.0 (typed ORM), psycopg 3, Alembic migrations **(under review)** |
 | Web | **(under review)** — NiceGUI is the default for the start, pending the WebSocket cost spike in [ADR 0003](../decisions/0003-ui-keyboard-first-htmx.md); plan B is a Vue 3 + Vite SPA. Rule either way: no domain logic in the UI layer |
@@ -30,13 +30,13 @@ Items marked **(under review)** are not settled — see the list at the bottom b
 
 ## Code structure
 
-**(under review)** — the earlier `src/expensior/...` sketch is withdrawn: no `src/` layout, and the shape
-needs rethinking now that [ADR 0007](../decisions/0007-transformations-elt-in-postgres.md) adds a raw
-landing stage and SQL-owned aggregates, and `infra/` has a defined place
-([ADR 0005](../decisions/0005-environments-terraform-layout.md)).
+**(proposed, under review)** — `src/expensior/` in layers `domain`, `db`, `services`, `cli`, `ui`, with
+dependencies pointing one way toward a pure `domain`; full description, rules and diagrams in
+[ADR 0009](../decisions/0009-package-structure.md). It builds on the raw landing stage and SQL-owned aggregates
+of [ADR 0007](../decisions/0007-transformations-elt-in-postgres.md).
 
-Settled so far: pure domain logic with no I/O stays separate from storage, and `alembic/`, `tests/`,
-`infra/` and `docs/` sit at the repository root.
+Settled: pure domain logic with no I/O stays separate from storage, and `alembic/`, `tests/`, `infra/` and
+`docs/` sit at the repository root ([ADR 0005](../decisions/0005-environments-terraform-layout.md) for `infra/`).
 
 ## Git & CI
 
@@ -52,4 +52,4 @@ Settled so far: pure domain logic with no I/O stays separate from storage, and `
 | DB stack | Are SQLAlchemy 2.0 + psycopg 3 + Alembic the right choices? Inherited from `menu_delivery`, not yet argued for this app — and [ADR 0007](../decisions/0007-transformations-elt-in-postgres.md) puts more weight on raw SQL than an ORM-first design assumes |
 | UI stack | NiceGUI is the default for the start; confirm it with the spike (what an idle open tab costs against scale-to-zero, editable table, cold start) or switch to plan B — see [ADR 0003](../decisions/0003-ui-keyboard-first-htmx.md) |
 | CLI access to production | Whether a one-off env override is an acceptable mechanism at all |
-| Code structure | Full layout, given raw landing, SQL views and `infra/` |
+| Code structure | Proposed in [ADR 0009](../decisions/0009-package-structure.md); to be confirmed in the owner's review |
