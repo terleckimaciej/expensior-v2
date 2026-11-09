@@ -10,7 +10,7 @@ Items marked **(under review)** are not settled — see the list at the bottom b
 | Python / deps | Python 3.12+, uv (`uv sync`, `uv run`) — a deliberate step up from Poetry, which `menu_delivery` uses. Flat layout, no `src/` |
 | Config | `pydantic-settings`, `.env` locally (gitignored), `.env.example` committed |
 | DB | SQLAlchemy 2.0 (typed ORM), psycopg 3, Alembic migrations **(under review)** |
-| Web | **(under review)** — HTMX is out; NiceGUI is the leading candidate, pending the WebSocket cost check in [ADR 0003](../decisions/0003-ui-keyboard-first-htmx.md) |
+| Web | **(under review)** — NiceGUI is the default for the start, pending the WebSocket cost spike in [ADR 0003](../decisions/0003-ui-keyboard-first-htmx.md); plan B is a Vue 3 + Vite SPA. Rule either way: no domain logic in the UI layer |
 | Lint / format | ruff (`ruff-check --fix`, `ruff-format`) |
 | Types | mypy |
 | Secrets scan | detect-secrets with `.secrets.baseline` |
@@ -50,6 +50,6 @@ Settled so far: pure domain logic with no I/O stays separate from storage, and `
 | Item | Question |
 |---|---|
 | DB stack | Are SQLAlchemy 2.0 + psycopg 3 + Alembic the right choices? Inherited from `menu_delivery`, not yet argued for this app — and [ADR 0007](../decisions/0007-transformations-elt-in-postgres.md) puts more weight on raw SQL than an ORM-first design assumes |
-| UI stack | Keyboard-first is dropped and HTMX with it; NiceGUI leads, but its WebSocket-per-client model has to be costed against scale-to-zero first — see [ADR 0003](../decisions/0003-ui-keyboard-first-htmx.md) |
+| UI stack | NiceGUI is the default for the start; confirm it with the spike (what an idle open tab costs against scale-to-zero, editable table, cold start) or switch to plan B — see [ADR 0003](../decisions/0003-ui-keyboard-first-htmx.md) |
 | CLI access to production | Whether a one-off env override is an acceptable mechanism at all |
 | Code structure | Full layout, given raw landing, SQL views and `infra/` |

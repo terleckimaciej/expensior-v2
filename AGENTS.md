@@ -37,8 +37,9 @@ Rules:
 
 - **Database:** Neon serverless Postgres (free plan, scales to zero) — ADR 0001
 - **Hosting:** single Cloud Run service, request-based billing, scale to zero, behind IAP — ADR 0002
-- **UI:** undecided — HTMX and keyboard-first are dropped; NiceGUI leads, pending a check on what its
-  per-client WebSocket costs against scale-to-zero — ADR 0003 (under revision). No SPA build either way.
+- **UI:** a ready-made Python framework — NiceGUI is the default for the start, pending a spike on what its
+  per-client WebSocket costs against scale-to-zero; plan B is a Vue 3 + Vite SPA (no Nuxt). HTMX and
+  keyboard-first are dropped. Keep the UI layer thin: no domain logic in it — ADR 0003 (proposed)
 - **Transformations:** land raw statement rows untouched, then derive; Python owns decoding, ids, conflict
   policy and the rules engine, SQL owns set-based work and every dashboard aggregate (views, not
   materialised); dbt stays out of the operational path — ADR 0007 (proposed)

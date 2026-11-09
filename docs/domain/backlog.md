@@ -4,6 +4,10 @@ Collected from `../expensior/expensior notatki.txt` and the v2 planning discussi
 
 ## MVP
 
+- [ ] UI spike (NiceGUI on Cloud Run, 1–2 days) before building any view — editable `ui.aggrid` table with edits
+      saved as superseding classifications, cost of an idle open tab vs scale-to-zero, behaviour on instance
+      restart, cold start, one chart with filters. Pass → ADR 0003 Accepted; fail → plan B (Vue 3 + Vite SPA).
+      Checklist: [`../research/ui-frameworks-2026-11.md`](../research/ui-frameworks-2026-11.md)
 - [ ] Import PKO BP CSV (dry-run, conflict policy, import batch audit, undo a batch)
 - [ ] Category tree management (view as tree, add/rename/move)
 - [ ] Rules management (CRUD, regex validated on save, stats: how many transactions each rule classified)

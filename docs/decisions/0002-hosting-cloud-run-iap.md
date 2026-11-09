@@ -10,7 +10,7 @@ Personal finance data must never be publicly reachable. Budget ~0 PLN/month, no 
 
 ## Decision
 
-- **Compute:** a single Cloud Run service (HTML UI + JSON API in one FastAPI app — see ADR 0003),
+- **Compute:** a single Cloud Run service (UI and backend in one FastAPI-based app — NiceGUI by default, see ADR 0003),
   request-based billing, `min-instances=0`. Region `europe-central2` (Warsaw).
 - **Access:** IAP enabled **directly on Cloud Run** (no load balancer). Projects without a Google
   organization need an OAuth client configured first.
@@ -35,7 +35,7 @@ Personal finance data must never be publicly reachable. Budget ~0 PLN/month, no 
 | Option | Why not |
 |---|---|
 | External HTTPS Load Balancer + IAP | LB has a fixed monthly cost; direct IAP on Cloud Run makes it unnecessary |
-| Separate API and UI services | Two things to deploy and secure for one user; server-rendered UI needs no separate frontend |
+| Separate API and UI services | Two things to deploy and secure for one user; the UI framework (ADR 0003) runs inside the same app, so no separate frontend service is needed |
 | Public service + app-level login | Reinventing auth; IAP is free and managed |
 | VM / GKE | Administration and fixed cost |
 | Images in GHCR (as in `menu_delivery`) | Cloud Run cannot deploy from it; an AR remote repository would proxy it but still store — and bill — the layers in AR. GHCR fits `menu_delivery` because that runtime *is* GitHub Actions |

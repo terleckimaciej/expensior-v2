@@ -1,76 +1,84 @@
-# 0003: UI — keyboard-first, server-rendered HTML (FastAPI + Jinja2 + HTMX)
+# 0003: UI — a ready-made Python framework (NiceGUI) as the starting point
 
-- **Status:** Proposed — under reconsideration, see 2026-09-12 note below
-- **Date:** 2026-09-11 (revised 2026-09-12)
+> The file keeps its original name (`…keyboard-first-htmx`) so that existing links stay valid; the
+> keyboard-first HTMX design it first proposed is now an *alternative*, see below.
+
+- **Status:** Proposed — default: NiceGUI, pending the spike below
+- **Date:** 2026-09-11 (revised 2026-09-12, 2026-11-09)
 
 ## Context
 
 The legacy Streamlit dashboard was clunky: full-script reruns, little control over layout, no real
-keyboard control. Original goal: a **minimalist** UI you can drive entirely from the keyboard, like
-Vim or Pop!_OS workspaces (switch views, move through lists, act on selection). Must stay cheap to
-run (one Cloud Run container) and simple to build (no JS toolchain if avoidable).
+keyboard control. Original goal: a **minimalist** UI you can drive entirely from the keyboard. Must stay
+cheap to run (one Cloud Run container) and simple to build.
 
 **2026-09-12 revision:** the owner does not want to write or learn real frontend (HTML/CSS/JS,
-focus/state management) just to get keyboard control — that trade is not worth it to them. Keyboard-first
-is **dropped as a hard goal**. The remaining, higher-priority constraints are:
+focus/state management) just to get keyboard control. Keyboard-first is **dropped as a hard goal**.
+Remaining constraints:
 - Minimize time spent on UI plumbing — as close to zero frontend work as possible.
-- Visual result should look better than the legacy Streamlit app (a specific complaint: Streamlit's
-  default look is disliked, not just its rerun/layout limitations).
-- Still need, out of the box: sensible editable tables (review/fix classification by hand), file
-  upload/drag-drop (statement import), buttons, and dashboard-style charts with filters.
+- Visual result should look better than the legacy Streamlit app (its default look is disliked).
+- Out of the box: editable tables (review/fix classification by hand), file upload/drag-drop
+  (statement import), buttons, dashboard-style charts with filters.
 
-This reopens the decision: the HTMX + hand-written JS keyboard layer below was justified almost
-entirely by the keyboard-first goal, which no longer holds.
+**2026-11-09 revision:** the owner weighed writing (or heavily AI-generating) a Vue/Nuxt frontend for
+flexibility, prompted by a Reddit thread critical of NiceGUI and by Reflex. Conclusion: the owner will not
+use frontend skills outside this project and does not want to learn them, and code they cannot review
+is a risk in an app that handles money. **A ready-made framework is the default for the start.** The
+worry that remains — being boxed in by the framework — is handled by a boundary rule, a spike with
+explicit exit criteria and a named plan B, not by committing to a frontend now.
+Facts behind this: [`research/ui-frameworks-2026-11.md`](../research/ui-frameworks-2026-11.md).
 
-## Decision (proposed, pre-2026-09-12 — see below)
+## Decision
 
-- Server-rendered HTML with **Jinja2** templates from the same FastAPI app, partial page updates via
-  **HTMX** (loaded from a pinned CDN or vendored file).
-- A small, hand-written **vanilla JS keyboard layer** (single module, no framework) implementing the
-  keymap in [`specs/keyboard-ux.md`](../specs/keyboard-ux.md). Every action is also reachable from a
-  `:` command palette, so the keymap is discoverable.
-- Minimal CSS (system font, one monospace font, light/dark via `prefers-color-scheme`). No component library.
-- Charts: a small library that renders from JSON the server provides, or server-side SVG — pick when
-  building the dashboard view.
-- The JSON API (`/api/...`) stays, so a terminal client is possible later.
-
-**Not re-decided yet as of 2026-09-12.** Leading candidate under discussion: **NiceGUI**
-(pure Python, built on Quasar/Vue — no HTML/CSS/JS to write) as a like-for-like replacement for
-Streamlit, rather than the HTMX approach above. Nothing is committed; this needs a follow-up
-conversation before the status can move to Accepted.
+1. **Start with NiceGUI** (pure Python on FastAPI; Quasar/Vue underneath — nothing to author in
+   HTML/CSS/JS). It provides `ui.aggrid` (editable grid for the classification-review table),
+   `ui.upload` (statement import) and `ui.echart` / `ui.plotly` (dashboard charts).
+2. **Boundary rule — the UI layer is thin.** No domain logic in UI code. Parsing and the rules engine are
+   pure Python, aggregates are SQL views (ADR 0007), and the UI only calls those and renders the result.
+   Replacing the UI then costs a rewrite of the UI, not of the project. This is the answer to lock-in.
+3. **Spike before "Accepted"** (timebox 1–2 days, NiceGUI on Cloud Run — checklist in the research note):
+   - the editable classification table works in `ui.aggrid` and edits can be persisted as new,
+     superseding classification rows;
+   - what an idle open tab costs under request-based billing (ADR 0002, target 0–5 PLN/month), whether
+     the instance scales to zero once the tab is closed, and what an instance restart does to open sessions;
+   - image size and cold start;
+   - one dashboard chart with filters.
+4. **Exit criteria — abandon NiceGUI if** an idle open tab pushes the projected cost over budget, or the
+   editable table cannot be made usable, or cold start is unacceptable.
+5. **Plan B — Vue 3 + Vite SPA (no Nuxt)**, built into static files and served by the same FastAPI
+   container, over a thin JSON API on top of the SQL views. A SPA is the only model without a persistent
+   WebSocket, so scale-to-zero works. Its price: a Node toolchain (dev and a Docker build stage), more code,
+   and the owner must be able to review frontend code. Rules if it is ever used: TypeScript client generated
+   from the OpenAPI schema; **money crosses the API as strings**, never JSON numbers (a `NUMERIC(12,2)` becomes
+   a float in JS).
 
 ## Alternatives considered
 
 | Option | Why not (for now) |
 |---|---|
-| Streamlit (legacy) | Disliked visual style; full-script reruns and limited layout — though `st.data_editor` (editable tables) and `@st.fragment` (partial reruns) are newer APIs that may address some of this without switching frameworks at all |
-| FastAPI + Jinja2 + HTMX + hand-written JS keyboard layer | Solves keyboard-first, but that goal is dropped (2026-09-12); would mean writing and owning real frontend code (focus/state management, accessibility) for a benefit no longer wanted |
-| **NiceGUI** (pure Python, Quasar/Vue under the hood) | *Leading candidate, not decided.* No HTML/CSS/JS to write. Better default visuals (Material Design) than Streamlit. `ui.aggrid` gives a full editable-grid component (inline edit, per-column filters, sorting) for the classification-review table; `ui.upload` gives drag-drop file import; `ui.echart`/`ui.plotly` for dashboard charts. Trade-off: event/callback-driven state model (`on_click`, manual state) rather than Streamlit's simpler top-to-bottom rerun-per-script model — closer to writing a small GUI app than a notebook script. Keyboard control would be minimal/absent, which is now acceptable. |
-| React/Svelte SPA (+ cmdk-style palette) | Full JS toolchain and build for a single-user app; more moving parts. Ruled out regardless of the keyboard question. |
-| Textual TUI (terminal) | Excellent keyboard UX, pure Python, but only in a terminal unless served via textual-serve. Still a candidate for a **second** client on top of `/api` later, independent of what the primary UI ends up being. |
+| **NiceGUI** | *The default — see Decision.* Trade-offs: callback-driven state instead of Streamlit's top-to-bottom rerun; editable-table ergonomics depend on `ui.aggrid` wiring (pull-style read-back, a grid rebuild drops in-progress edits); WebSocket per open tab; keyboard control minimal (acceptable now) |
+| Streamlit (legacy) | Disliked visual style; full-script reruns, limited layout — though `st.data_editor` and `@st.fragment` are newer APIs that may address some of it. Fallback if the NiceGUI spike fails and Plan B looks too heavy |
+| Reflex | Same WebSocket-per-client model and server-side state, so no gain on the main risk; compiles Python to a React frontend, so adds a JS toolchain to build and a two-part (frontend + backend) deploy that must fit one Cloud Run service; editable-table story not checked. Revisit if NiceGUI fails for reasons Reflex does not share |
+| Vue 3 + Vite SPA + FastAPI JSON API | **Plan B.** Best fit for scale-to-zero and for flexibility, but needs frontend knowledge the owner does not want to acquire |
+| Nuxt | SSR/SEO buys nothing behind IAP; adds a Node server or a static-generate step on top of Vue |
+| Own / heavily AI-written frontend | Flexibility is hypothetical today (tables, forms, upload, charts are standard widgets), while the cost is concrete: code the owner cannot review or debug, and silent money bugs |
+| FastAPI + Jinja2 + HTMX + hand-written JS keyboard layer (the original proposal) | Solves keyboard-first, but that goal is dropped (2026-09-12); would mean writing and owning real frontend code (focus/state management, accessibility) for a benefit no longer wanted |
+| React/Svelte SPA | Full JS toolchain for a single-user app; same objections as Vue, with no advantage here |
+| Textual TUI (terminal) | Excellent keyboard UX, pure Python, but terminal-only unless served via textual-serve. Still a candidate for a **second** client later, independent of the primary UI |
 
 ## Consequences
 
-- Good (if HTMX path is kept): one language (Python) + tiny JS; one container; fast pages; the keyboard layer is fully ours.
-- Bad (if HTMX path is kept): keyboard handling, focus management and accessibility are our
-  responsibility; HTMX swaps must keep focus/selection state sane — effort the owner has said they
-  do not want to spend.
-- Good (if NiceGUI path is chosen): zero HTML/CSS/JS authored; better default visual polish than
-  Streamlit; `/api` JSON layer from the HTMX plan is not needed since NiceGUI is the whole app, though
-  it could still be exposed separately if a future client wants it.
-- Bad (if NiceGUI path is chosen): state is callback-driven, not scripted top-to-bottom like Streamlit
-  — a small mental shift; editable-table ergonomics depend on `ui.aggrid` wiring rather than a single
-  turnkey call.
-- Open / follow-ups:
-  - **Verify the WebSocket cost model on Cloud Run before choosing NiceGUI.** NiceGUI (like Streamlit)
-    keeps per-client state on the server and syncs over a persistent WebSocket. On Cloud Run that is a
-    long-running request: an open browser tab can keep an instance alive and billed, which cuts against
-    scale-to-zero and the ~0 PLN target in [ADR 0002](0002-hosting-cloud-run-iap.md). Also check what an
-    instance restart does to open sessions, and whether session affinity is needed above one instance.
-    A server-rendered page has no such connection — this is the main architectural price of the
-    pure-Python UI frameworks, and it is decisive, not a detail.
-  - Decide HTMX-keyboard-first vs. NiceGUI vs. "stay on Streamlit and try `data_editor`/`fragment`" —
-    needs a short spike/comparison before this ADR can move to Accepted.
-  - Chart library, whether bulk-edit uses a modal or inline mode — still open regardless of framework.
-  - `specs/keyboard-ux.md` is now stale relative to the dropped keyboard-first goal; revisit once the
-    framework choice is made.
+- Good: zero HTML/CSS/JS authored; better default look than Streamlit; one container, one language; the
+  thin-UI rule keeps the exit open.
+- Bad / accepted risks:
+  - State is callback-driven, a small mental shift from Streamlit.
+  - NiceGUI keeps per-client state on the server over a persistent WebSocket. On Cloud Run an open tab can
+    keep an instance active and possibly billed, which cuts against scale-to-zero and the ~0 PLN target in
+    [ADR 0002](0002-hosting-cloud-run-iap.md). Whether it does — and what restarts do to open sessions — is
+    **not settled by the Google docs** and must be measured in the spike; this is the decisive risk, not a detail.
+  - NiceGUI is a smaller project than the big JS ecosystems; if it stalls, the thin-UI rule limits the damage.
+- Follow-ups:
+  - Run the spike (backlog item in [`domain/backlog.md`](../domain/backlog.md)); then move this ADR to
+    Accepted (NiceGUI) or Superseded (Plan B / Streamlit).
+  - If NiceGUI is kept: decide the chart library and whether bulk edit uses a modal or inline mode.
+  - [`specs/keyboard-ux.md`](../specs/keyboard-ux.md) stays stale until/unless keyboard navigation returns.
