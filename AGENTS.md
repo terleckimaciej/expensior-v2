@@ -43,7 +43,9 @@ Rules:
 - **UI:** a ready-made Python framework — NiceGUI is the default for the start, pending a spike on what its
   per-client WebSocket costs against scale-to-zero; plan B is a Vue 3 + Vite SPA (no Nuxt). HTMX and
   keyboard-first are dropped. Keep the UI layer thin: no domain logic in it — ADR 0003 (proposed)
-- **Transformations:** land raw statement rows untouched, then derive; Python owns decoding, ids, conflict
+- **Code structure:** a `src/expensior/` package in layers `domain` (pure, no I/O) ← `db` ← `services` ← `cli`/`ui`;
+  dependencies point one way, only `services` open transactions, the UI never touches `db` — ADR 0009 (proposed)
+- **Transformations:** keep the original file bytes, land raw rows untouched, then derive; Python owns decoding, ids, conflict
   policy and the rules engine, SQL owns set-based work and every dashboard aggregate (views, not
   materialised); dbt stays out of the operational path — ADR 0007 (proposed)
 - **Analytics:** optional later — Datastream CDC to BigQuery in a daily window, dbt as the modelling

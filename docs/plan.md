@@ -30,15 +30,15 @@ needs — can wait until there is something to show.
 | 6 | **UI** | The framework decision, then import, transactions and dashboard screens | Nothing earlier depends on it |
 | 7 | **Deployment** | Dockerfile, Terraform, Cloud Run behind IAP, the Neon secret, CI/CD | [ADR 0002](decisions/0002-hosting-cloud-run-iap.md); the environment and deploy ADRs are settled by then |
 
-Stages 0–3 are the first usable core (a statement can be imported and classified from the command line) and map to
-the `0.1.0` milestone; stages 4–7 map to `0.2.0`. Milestones live on GitHub.
+All stages belong to one release, `0.1.0` — the MVP — because nothing is released before the deployment stage.
+Finer-grained progress is the Project's job, not the milestone's. Milestones live on GitHub.
 
 ## Decisions that fall due inside the stages
 
 - **Before stage 2:** accept or amend [ADR 0007](decisions/0007-transformations-elt-in-postgres.md) — the import
   design stands on it.
-- **Stage 0:** the code structure. Already settled: no `src/` layout, and `alembic/`, `tests/`, `infra/` and
-  `docs/` sit at the repository root; the structure of the package itself is not.
+- **Before stage 0:** confirm the code structure proposed in [ADR 0009](decisions/0009-package-structure.md)
+  (a `src/expensior/` package in layers, with `alembic/`, `tests/`, `infra/` and `docs/` at the repository root).
 - **Before stage 6:** the UI framework. [ADR 0003](decisions/0003-ui-keyboard-first-htmx.md) makes NiceGUI the
   default, with the cost of an open WebSocket tab on Cloud Run to be measured (tracked as a GitHub issue); plan B
   is a Vue 3 + Vite SPA.
