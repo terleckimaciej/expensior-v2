@@ -23,5 +23,11 @@ uv run pytest                  # tests
 uv run expensior --help        # the command-line entry point
 ```
 
+Database: `uv run alembic upgrade head` applies the migrations to the database in `DATABASE_URL`, and
+`uv run alembic revision -m "what changes"` creates a new one. Tests marked `db` need the local Postgres:
+they use a separate database `expensior_test` (created on demand) and refuse any host but localhost, or a name
+not ending in `_test`. Without Postgres they are skipped locally (and fail in CI); skip them explicitly with
+`uv run pytest -m "not db"`. `TEST_DATABASE_URL` overrides the default test database.
+
 Checks that CI also runs: `uv run pre-commit run --all-files` (ruff, mypy, import-linter, detect-secrets),
 or one by one: `uv run ruff check`, `uv run mypy`, `uv run lint-imports`.
