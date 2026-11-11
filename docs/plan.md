@@ -37,6 +37,9 @@ Finer-grained progress is the Project's job, not the milestone's. Milestones liv
 
 - **Before stage 2:** accept or amend [ADR 0007](decisions/0007-transformations-elt-in-postgres.md) — the import
   design stands on it.
+- **Before stage 2:** whether a bank API (Enable Banking) is a second source next to the CSV, and the rule that
+  gives a transaction one id regardless of source. The answer comes from a research spike (a GitHub issue) and is
+  recorded in ADR 0007 or a research note.
 - **Before stage 6:** the UI framework. [ADR 0003](decisions/0003-ui-keyboard-first-htmx.md) makes NiceGUI the
   default, with the cost of an open WebSocket tab on Cloud Run to be measured (tracked as a GitHub issue); plan B
   is a Vue 3 + Vite SPA.

@@ -1,7 +1,8 @@
 # 0007: Transformations — land raw, transform in Postgres, dbt deferred
 
 - **Status:** Proposed
-- **Date:** 2026-09-12 (revised 2026-11-09: "raw" is now the original file bytes)
+- **Date:** 2026-09-12 (revised 2026-11-09: "raw" is now the original file bytes; revised 2026-11-10: a bank API is
+  a second source, and transaction identity does not depend on the source)
 
 ## Context
 
@@ -36,6 +37,37 @@ The format is recognised from the header's signature. An unknown signature ends 
 "unrecognised format" — the bytes stay stored, and once a parser and a view for the new format exist the
 batch is reprocessed. Fixing a parser or adapting to a bank's format change then means reprocessing, not
 re-downloading statements, and "what actually arrived?" is always answerable.
+
+**A bank API is a second source, not a second design.** The spike in [#12](https://github.com/terleckimaciej/expensior-v2/issues/12)
+([findings](../research/enable-banking-pko-2026-11.md)) showed that PKO BP returns two years of booked
+transactions through Enable Banking, and that they can be matched one-to-one with the CSV export. The three layers
+stay as they are; only layer 0 and the adapters differ:
+
+- **Layer 0 for an API source** is the response exactly as received (the JSON of all pages), stored as the batch's
+  bytes with its `sha256`, `source` (e.g. `enable_banking_pko`) and a `format_version` for the response shape. It
+  is written first and committed on its own, like a file. The first fetch after a new authorisation uses the
+  longest history and keeps the response, because the bank may later serve only the last 90 days.
+- **Layer 1** holds one raw row per transaction (the transaction object as `jsonb`), read through a view per
+  format (`raw_enable_banking_v1`), like `raw_pko_v1` for the CSV.
+- **Layer 2 is one table for every source.** A source adapter is a pure function from a raw row to a transaction;
+  fields a source does not have stay empty (`country`, `city` and the value date exist only in the CSV).
+
+**One transaction, one id, whichever source it came from.** The CSV carries no identifier assigned by the bank, so
+`transaction_id` is derived from what both sources share: the **operation date** (CSV "Data operacji", API
+`booking_date`), the **signed amount** and the **balance after the transaction**. The balance chain makes the
+combination unique in practice; in the spike every CSV row matched exactly one API transaction. The same
+transaction imported from the CSV and from the API therefore gets the same id and falls under the ordinary
+conflict policy instead of becoming a duplicate. The API's `entry_reference` is kept as an attribute of the raw
+row, not as part of the id, because the CSV has no equivalent. Which account a statement belongs to is not in the
+CSV; with one account that does not matter, and a second account would add an account key to the id.
+
+**The date that places a transaction in a month is the operation date.** The CSV "Data waluty" differs from it on
+most rows and the API does not return it, so it is stored when present and is optional; months, charts and
+filters use the operation date.
+
+**Holds are not transactions.** CSV rows of type `Blokada` (no operation date, balance "W rozliczeniu") are skipped
+at import and counted in the batch audit: the same payment later arrives as a booked row, and keeping both would
+duplicate it. The API is asked for booked transactions only.
 
 **Python owns what needs byte-level or product semantics:**
 
