@@ -29,6 +29,7 @@ New decision → copy [`0000-template.md`](decisions/0000-template.md), next num
 
 - [GCP & Neon costs, limits and gotchas (2026-09)](research/gcp-costs-2026-09.md)
 - [UI frameworks: NiceGUI, Reflex, Vue SPA and Cloud Run WebSockets (2026-11)](research/ui-frameworks-2026-11.md)
+- [Enable Banking and PKO BP: what the API returns, compared with the CSV (2026-11)](research/enable-banking-pko-2026-11.md)
 
 ## Domain (`domain/`)
 
