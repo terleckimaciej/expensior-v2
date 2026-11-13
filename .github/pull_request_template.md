@@ -1,9 +1,9 @@
-Why:
+## Why
 
-What:
+## What
 -
 
-Verification:
+## Verification
 - uv run pytest:
 - By hand:
 

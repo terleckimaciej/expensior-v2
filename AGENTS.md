@@ -118,16 +118,20 @@ Rules:
   separate from the feature); then *every* commit must follow the format and carry its own description, and the
   PR description does not reach git.
 - **PR title:** the same format as a commit, about 72 characters at most (GitHub appends `(#N)`).
-- **PR description** lands verbatim in the commit body on `master`, so write it as plain text: no markdown
-  headings and no checkboxes (git drops lines starting with `#` when a message is edited in an editor). Follow
-  the template in `.github/pull_request_template.md`: `Why:` first — the reason is what someone reading
-  `git log` looks for — then `What:`, `Verification:`, and `Closes #N`. No "next steps": plans belong in issues,
-  a commit records what happened. Fix the description before merging, not after.
+- **PR description** lands verbatim in the commit body on `master`. Follow the template in
+  `.github/pull_request_template.md`: `## Why` first — the reason is what someone reading `git log` looks
+  for — then `## What`, `## Verification`, and `Closes #N`. The `##` headings render well on GitHub and stay
+  readable in `git log`; GitHub's squash merge stores them untouched. Git drops lines starting with `#` only
+  when a message is edited in an editor (`commit --amend`, `rebase -i` reword), which `master` history does not
+  go through; if you do edit a message that way, run `git config commit.cleanup whitespace` first. No
+  checkboxes (they mean nothing in history). No "next steps": plans belong in issues, a commit records what
+  happened. Fix the description before merging, not after.
 
 ## Things that are easy to get wrong
 
 - Money: never use float. Use `Decimal` in Python and `NUMERIC(12,2)` in Postgres.
-- Dates: bank "Data waluty" is a date, not a timestamp; app timestamps are UTC (`timestamptz`).
+- Dates: the bank's "Data operacji" and "Data waluty" are dates, not timestamps; the operation date places a
+  transaction in a month (ADR 0007). App timestamps are UTC (`timestamptz`).
 - Import must be idempotent: re-importing the same statement must not duplicate transactions.
 - Classification history is append-only: a new classification supersedes the old one, it does not overwrite it.
 - Production data is real personal finance data. Never paste it into issues, logs, fixtures or prompts;

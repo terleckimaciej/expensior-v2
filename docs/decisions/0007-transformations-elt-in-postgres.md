@@ -54,12 +54,14 @@ stay as they are; only layer 0 and the adapters differ:
 
 **One transaction, one id, whichever source it came from.** The CSV carries no identifier assigned by the bank, so
 `transaction_id` is derived from what both sources share: the **operation date** (CSV "Data operacji", API
-`booking_date`), the **signed amount** and the **balance after the transaction**. The balance chain makes the
-combination unique in practice; in the spike every CSV row matched exactly one API transaction. The same
+`booking_date`), the **signed amount** and the **balance after the transaction**, within one **account**. The
+balance chain makes the combination unique in practice; in the spike every CSV row matched exactly one API
+transaction. The same
 transaction imported from the CSV and from the API therefore gets the same id and falls under the ordinary
 conflict policy instead of becoming a duplicate. The API's `entry_reference` is kept as an attribute of the raw
 row, not as part of the id, because the CSV has no equivalent. Which account a statement belongs to is not in the
-CSV; with one account that does not matter, and a second account would add an account key to the id.
+CSV, so the importer is told; the schema, including the accounts table, is in
+[ADR 0010](0010-database-schema.md).
 
 **The date that places a transaction in a month is the operation date.** The CSV "Data waluty" differs from it on
 most rows and the API does not return it, so it is stored when present and is optional; months, charts and
