@@ -195,9 +195,12 @@ container in CI), including the SQL views. `tests/cli/` — thin. Fixtures are s
     (only the types the logic needs).
   - A layered structure means a use case touches several packages; a small feature is several small edits.
   - View SQL in migrations is outside mypy and ruff (already accepted in ADR 0007).
+- Settled in stage 1c: the unit of work is a context manager with an **explicit commit**
+  (`with UnitOfWork(session_factory) as uow: ...; uow.commit()`). Leaving the block without a commit, or with
+  an exception, rolls back, so a forgotten commit never saves half the work. One unit of work is one database
+  transaction; the import's two transactions (bytes first, rows after) are two successive blocks.
 - Open — to settle when the code exists, not now:
   - CLI library: the skeleton uses stdlib `argparse`; revisit if the commands multiply.
-  - How the unit of work is spelled (a context manager on a session, or an explicit object).
   - What `reprocess_batch` does when a corrected parser derives a different `transaction_id`.
 - Follow-ups: the module tables and the three diagrams are the raw material for `docs/architecture.md`, to be
   written once the first stages exist. Re-check this ADR after stage 2 shows how it holds. The layer rules are
