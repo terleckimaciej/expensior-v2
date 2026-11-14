@@ -1,7 +1,7 @@
 # 0010: Database schema — accounts, three layers, append-only classification history
 
-- **Status:** Proposed
-- **Date:** 2026-11-13
+- **Status:** Accepted
+- **Date:** 2026-11-13 (accepted 2026-11-14)
 
 ## Context
 

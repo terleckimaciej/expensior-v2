@@ -17,12 +17,10 @@ context resets (human and AI).
 | [0004](decisions/0004-analytics-bigquery-datastream.md) | Analytics: Datastream CDC → BigQuery | Deferred |
 | [0005](decisions/0005-environments-terraform-layout.md) | Environments (tagged revisions, Neon dev project) and Terraform layout | Proposed |
 | [0006](decisions/0006-deploy-ownership.md) | Who owns the deploy — Terraform or CI | Proposed (no verdict) |
-| [0007](decisions/0007-transformations-elt-in-postgres.md) | Transformations: land raw, transform in Postgres, dbt deferred | Proposed |
+| [0007](decisions/0007-transformations-elt-in-postgres.md) | Transformations: land raw, transform in Postgres, dbt deferred | Accepted |
 | [0008](decisions/0008-open-work-in-github-issues.md) | Open work in GitHub issues, a Project as the status view, docs carry no status | Accepted |
 | [0009](decisions/0009-package-structure.md) | Code structure: a `src/` package in layers with one-way dependencies | Accepted |
-| [0010](decisions/0010-database-schema.md) | Database schema: accounts, three layers, append-only classification history | Proposed |
-| [0005](decisions/0005-environments-terraform-layout.md) | Environments (tagged revisions, Neon dev project) and Terraform layout | Proposed |
-| [0006](decisions/0006-deploy-ownership.md) | Who owns the deploy — Terraform or CI | Proposed (no verdict) |
+| [0010](decisions/0010-database-schema.md) | Database schema: accounts, three layers, append-only classification history | Accepted |
 
 New decision → copy [`0000-template.md`](decisions/0000-template.md), next number, add a row above.
 

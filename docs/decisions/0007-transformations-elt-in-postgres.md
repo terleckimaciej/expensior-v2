@@ -1,8 +1,8 @@
 # 0007: Transformations — land raw, transform in Postgres, dbt deferred
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-09-12 (revised 2026-11-09: "raw" is now the original file bytes; revised 2026-11-10: a bank API is
-  a second source, and transaction identity does not depend on the source)
+  a second source, and transaction identity does not depend on the source; accepted 2026-11-14)
 
 ## Context
 

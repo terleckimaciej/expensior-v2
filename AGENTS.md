@@ -48,7 +48,7 @@ Rules:
   rules are checked by import-linter in CI — ADR 0009
 - **Transformations:** keep the original file bytes, land raw rows untouched, then derive; Python owns decoding, ids, conflict
   policy and the rules engine, SQL owns set-based work and every dashboard aggregate (views, not
-  materialised); dbt stays out of the operational path — ADR 0007 (proposed)
+  materialised); dbt stays out of the operational path — ADR 0007
 - **Analytics:** optional later — Datastream CDC to BigQuery in a daily window, dbt as the modelling
   layer there — ADR 0004 (deferred)
 - **Environments:** one GCP project, one Cloud Run service; pre-prod is a tagged no-traffic revision, not a
