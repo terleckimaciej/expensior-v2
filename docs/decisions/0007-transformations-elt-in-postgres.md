@@ -38,10 +38,11 @@ The format is recognised from the header's signature. An unknown signature ends 
 batch is reprocessed. Fixing a parser or adapting to a bank's format change then means reprocessing, not
 re-downloading statements, and "what actually arrived?" is always answerable.
 
-**A bank API is a second source, not a second design.** The spike in [#12](https://github.com/terleckimaciej/expensior-v2/issues/12)
+**The bank API is the main source and the CSV another, not a second design.** The spike in [#12](https://github.com/terleckimaciej/expensior-v2/issues/12)
 ([findings](../research/enable-banking-pko-2026-11.md)) showed that PKO BP returns two years of booked
-transactions through Enable Banking, and that they can be matched one-to-one with the CSV export. The three layers
-stay as they are; only layer 0 and the adapters differ:
+transactions through Enable Banking, and that they can be matched one-to-one with the CSV export. The API is what
+the application uses day to day; the CSV import stays for history older than the API returns and as a fallback.
+The three layers stay as they are; only layer 0 and the adapters differ:
 
 - **Layer 0 for an API source** is the response exactly as received (the JSON of all pages), stored as the batch's
   bytes with its `sha256`, `source` (e.g. `enable_banking_pko`) and a `format_version` for the response shape. It
