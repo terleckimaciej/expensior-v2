@@ -23,7 +23,7 @@ needs — can wait until there is something to show.
 |---|---|---|---|
 | 0 | **Skeleton** | uv and `pyproject`, repository layout, pytest, ruff, mypy, pre-commit with detect-secrets, CI, local Postgres in `docker compose`, `pydantic-settings` | CI must be green from the first line of code. This is where the "code structure" item in [conventions](guides/conventions.md) gets decided |
 | 1 | **Schema** | Alembic and the tables: import batches (with the original file bytes), raw rows (`jsonb`), transactions, categories, rules, classification history, flags; `NUMERIC(12,2)`; a partial unique index for "one current classification"; a repository layer | [ADR 0007](decisions/0007-transformations-elt-in-postgres.md); legacy had SQL scattered across endpoints ([legacy notes](domain/legacy-expensior.md)) |
-| 2 | **Import** | A pure PKO BP parser: store the file bytes first, recognise the format version from the header, decode (incl. mojibake), land raw rows, derive transactions; stable `transaction_id`; idempotent re-import; conflict policy; dry-run; batch audit; undo a batch. A CLI first (`import <file> --dry-run`) that prints the target host and asks before writing | The largest piece of logic; fully testable on synthetic CSVs, no UI needed |
+| 2 | **Import** | One import service over source adapters: store the original bytes first, recognise the format, land raw rows, derive transactions; stable `transaction_id`; idempotent re-import; conflict policy; dry-run; batch audit; undo a batch. The bank API (Enable Banking) is the main source and the PKO BP CSV the second (older history, fallback). A CLI first (`import <file> --dry-run`, a fetch command for the API) that prints the target host and asks before writing | The largest piece of logic; fully testable on synthetic data, no UI needed |
 | 3 | **Classification** | Category tree; the rules engine with typed (Pydantic) conditions; running classification over unclassified transactions; append-only classification history; regex validated when a rule is saved | The domain core, plain Python over typed objects |
 | 4 | **Views** | A base view plus aggregates by grain (month, month × category, month × subcategory), versioned in Alembic and tested against Postgres | Everything the dashboard shows, defined once in the database ([ADR 0007](decisions/0007-transformations-elt-in-postgres.md)) |
 | 5 | **Query layer** | Service functions: filtered transaction lists, manual and bulk reclassification, dashboard queries | The whole backend is exercised by pytest before any UI exists |
@@ -37,9 +37,10 @@ Finer-grained progress is the Project's job, not the milestone's. Milestones liv
 
 - **Before stage 2:** accept or amend [ADR 0007](decisions/0007-transformations-elt-in-postgres.md) — the import
   design stands on it.
-- **Before stage 2:** whether a bank API (Enable Banking) is a second source next to the CSV, and the rule that
-  gives a transaction one id regardless of source. The answer comes from a research spike (a GitHub issue) and is
-  recorded in ADR 0007 or a research note.
+- **Before stage 2:** how a bank API (Enable Banking) and the CSV fit together, and the rule that gives a
+  transaction one id regardless of source. The answer came from a research spike and is recorded in
+  [ADR 0007](decisions/0007-transformations-elt-in-postgres.md) and [ADR 0010](decisions/0010-database-schema.md):
+  the API is the main source, the CSV the second.
 - **Before stage 6:** the UI framework. [ADR 0003](decisions/0003-ui-keyboard-first-htmx.md) makes NiceGUI the
   default, with the cost of an open WebSocket tab on Cloud Run to be measured (tracked as a GitHub issue); plan B
   is a Vue 3 + Vite SPA.
