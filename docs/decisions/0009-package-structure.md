@@ -118,9 +118,9 @@ Names are provisional and settle as the code is written; the responsibilities ar
 | Module | Responsibility |
 |---|---|
 | `formats.py` | registry: header signature → `format_version` (`pko_bp` v1, …); "unrecognised" is a result, not an exception |
-| `decoding.py` | bytes → text: encoding detection, mojibake repair |
+| `decoding.py` | bytes → text: UTF-8 (strict) first, else cp1250; the lossy mojibake variants of type names are handled by the adapter's lookup, not here |
 | `raw.py` | `RawBatch` / `RawRow`: the header and the cells as text, no interpretation |
-| `identity.py` | stable `transaction_id` from the raw cells (long hashes, per legacy lessons) |
+| `identity.py` | stable `transaction_id` from account, operation date, signed amount and balance after (ADR 0010); lives in `domain/identity.py`, since the id does not depend on the source |
 | `plan.py` | `ConflictPolicy` (`ignore \| replace \| abort`) and `ImportPlan`: incoming ids + existing ids → what would be inserted, skipped, replaced |
 
 **`domain/rules/`**: `conditions.py` (typed Pydantic conditions), `engine.py` (priority order, first match wins, only
