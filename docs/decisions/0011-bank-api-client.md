@@ -41,6 +41,25 @@ linked to it as `external_ref` the first time the API is used (by name, to an ac
 import, or as a new one), and the channel a batch came by is `import_batches.source`. This clarifies the examples
 in [ADR 0010](0010-database-schema.md), which listed the API as an account's source.
 
+**The consent is stored on the account.** An account keeps the id of its bank session and when the consent ends
+(`bank_session_id`, `consent_valid_until`). The bank's account ids change with every consent, so a fetch reads
+the session and picks the account by its identification hash instead of storing an id. The commands warn two
+weeks before the consent ends and, once it has ended, ask for a new one without calling the bank. One bank
+account is one account of the application, so a consent that covers three bank accounts becomes three accounts.
+
+**Connecting is three explicit steps, and the command line runs them in one interactive run.** The user approves
+access in the bank's app, outside the application, so the flow crosses a step the application does not control:
+`begin_connect` asks for the consent and returns the address and a `state`; `open_session` takes what the user
+pasted back (the address or only the code), checks that its `state` is the one asked for and exchanges the code,
+which works once, for a session; `link_accounts` links the bank accounts the user named, with the consent, in one
+transaction. Every step takes and returns its values explicitly. `bank connect` is a thin client of the three in
+one process: it keeps the `state` and the session in memory, so it needs no flags that carry them between runs.
+This is enough while the command line is the only client. A web page cannot do it, since the two halves are
+different requests: when the interface arrives, the pending approval (its `state`, and the session until the
+accounts are named) is stored in the database behind the same three steps, and the redirect address becomes a
+route of the application, so nothing is pasted. Fetching stays non-interactive, because it will run on a
+schedule; renewing a consent cannot be automated, since the user must approve it.
+
 ## Alternatives considered
 
 | Option | Why not |
@@ -52,6 +71,8 @@ in [ADR 0010](0010-database-schema.md), which listed the API as an account's sou
 | The client inside `domain` | Breaks the rule that `domain` is pure and needs no I/O library |
 | A separate account per channel (CSV, API) | The same transaction would get two ids; the CSV could not enrich what the API gave, and totals would double |
 | The private key in an environment variable or in `.env` | It ends up in process listings, logs and backups; a file with restricted permissions is the conventional place |
+| Several commands with flags that carry the session between runs (`connect`, then `--code`, then `--session --bank-account`) | The steps mirrored the API, not what the user does; the same command run twice with different flags was the confusing part, and the session id had to be copied between runs |
+| Storing the pending approval in the database now | Needed only when a web page runs the steps as separate requests; a table and a migration for an interface that does not exist yet. The steps already take their values explicitly, so it can be added behind them |
 
 ## Consequences
 

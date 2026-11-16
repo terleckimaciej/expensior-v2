@@ -83,6 +83,16 @@ def test_the_first_fetch_creates_a_linked_account_and_imports(uow_factory: UowFa
         assert account is not None and account.name == "main"
 
 
+def test_a_new_account_gets_the_currency_of_the_bank_account(uow_factory: UowFactory) -> None:
+    dollars = BankAccount(uid="uid-9", identification_hash="hash-9", name="USD", currency="USD")
+
+    _fetch(uow_factory, FakeFetcher(_transactions()), bank_account=dollars, account_name="usd")
+
+    with uow_factory() as uow:
+        account = uow.accounts.get_by_name("usd")
+        assert account is not None and account.currency == "USD"
+
+
 def test_fetching_again_does_not_duplicate(uow_factory: UowFactory) -> None:
     fetcher = FakeFetcher(_transactions())
     _fetch(uow_factory, fetcher)

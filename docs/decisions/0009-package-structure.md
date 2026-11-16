@@ -134,8 +134,10 @@ unclassified input), `validation.py` (a regex is validated when a rule is saved)
 **`db/`**: `repositories/` hold all SQL access (the legacy lesson: a repository layer from day one);
 `queries/` read the views; `unit_of_work.py` bundles one session with its repositories.
 
-**`services/`**: `import_statement`, `reprocess_batch`, `undo_batch`, `classify`, `reclassify` (manual and bulk),
-`categories`, `rules`, `transactions`, `dashboard`.
+**`services/`**: `import_statement`, `fetch_transactions`, `bank` (connect an account, fetch with it), `accounts`,
+`reprocess_batch`, `undo_batch`, `classify`, `reclassify` (manual and bulk), `categories`, `rules`,
+`transactions`, `dashboard`. `runtime` builds what a command needs from the settings (the database, the bank
+client), so `cli` imports neither `db` nor `bank`.
 
 **`cli/`**: `main.py` (the `expensior` script, declared in `pyproject.toml`), one module per command group, and
 `confirm.py`, which prints the target database host and asks before any write (a rule in `AGENTS.md`).

@@ -1,5 +1,7 @@
 """Reading and writing bank accounts. Never commits."""
 
+from datetime import datetime
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -14,6 +16,8 @@ def _record(row: models.Account) -> Account:
         source=row.source,
         external_ref=row.external_ref,
         currency=row.currency,
+        bank_session_id=row.bank_session_id,
+        consent_valid_until=row.consent_valid_until,
     )
 
 
@@ -43,6 +47,18 @@ class AccountRepository:
         if row is None:
             raise LookupError(f"no account with id {account_id}")
         row.external_ref = external_ref
+        self._session.flush()
+        return _record(row)
+
+    def set_consent(
+        self, account_id: int, bank_session_id: str, valid_until: datetime | None
+    ) -> Account:
+        """Record the bank session of a new or renewed consent and when it ends."""
+        row = self._session.get(models.Account, account_id)
+        if row is None:
+            raise LookupError(f"no account with id {account_id}")
+        row.bank_session_id = bank_session_id
+        row.consent_valid_until = valid_until
         self._session.flush()
         return _record(row)
 

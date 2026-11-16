@@ -69,6 +69,10 @@ class Account(Base):
     source: Mapped[str] = mapped_column(Text)  # the bank the account is at, e.g. "pko_bp"
     external_ref: Mapped[str | None] = mapped_column(Text)  # the API's identification hash
     currency: Mapped[str] = mapped_column(String(3), server_default="PLN")
+    # The current consent for reading the account through the bank API (ADR 0011). The session's
+    # account ids change with every consent, so only its id is kept and the ids are read from it.
+    bank_session_id: Mapped[str | None] = mapped_column(Text)
+    consent_valid_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class ImportBatch(Base):

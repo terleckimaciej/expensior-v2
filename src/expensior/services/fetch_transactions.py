@@ -45,30 +45,42 @@ def _find_account(uow: UnitOfWork, bank_account: BankAccount, account_name: str)
     return linked or uow.accounts.get_by_name(account_name)
 
 
+def link_in(uow: UnitOfWork, bank_account: BankAccount, account_name: str) -> Account:
+    """The application's account for a bank account, in the caller's transaction (no commit).
+
+    Found by the bank's hash; else an account of that name that is not linked yet is linked to it
+    (one made for a CSV, say); else a new account is made, in the bank account's currency.
+    """
+    assert bank_account.identification_hash is not None
+    account = _find_account(uow, bank_account, account_name)
+    if account is None:
+        return uow.accounts.add(
+            account_name,
+            BANK_SOURCE,
+            external_ref=bank_account.identification_hash,
+            currency=bank_account.currency or "PLN",
+        )
+    if account.external_ref is None:
+        return uow.accounts.set_external_ref(account.id, bank_account.identification_hash)
+    if account.external_ref != bank_account.identification_hash:
+        raise AccountMismatchError(
+            f"the account {account.name!r} is linked to a different bank account"
+        )
+    return account
+
+
 def _resolve_account(
     uow_factory: UnitOfWorkFactory, bank_account: BankAccount, account_name: str, *, dry_run: bool
 ) -> Account:
-    """The application's account for a bank account: found by its hash, linked by name, or new.
-
-    A dry run changes nothing: the account must already exist.
-    """
+    """The account a fetch imports into. A dry run changes nothing: the account must exist."""
     assert bank_account.identification_hash is not None
     with uow_factory() as uow:
-        account = _find_account(uow, bank_account, account_name)
         if dry_run:
+            account = _find_account(uow, bank_account, account_name)
             if account is None:
                 raise AccountNotFoundError(f"there is no account named {account_name!r}")
             return account
-        if account is None:
-            account = uow.accounts.add(
-                account_name, BANK_SOURCE, external_ref=bank_account.identification_hash
-            )
-        elif account.external_ref is None:
-            account = uow.accounts.set_external_ref(account.id, bank_account.identification_hash)
-        elif account.external_ref != bank_account.identification_hash:
-            raise AccountMismatchError(
-                f"the account {account.name!r} is linked to a different bank account"
-            )
+        account = link_in(uow, bank_account, account_name)
         uow.commit()
         return account
 

@@ -42,6 +42,9 @@ class BankAccount:
     uid: str
     identification_hash: str | None
     name: str | None
+    currency: str | None = None
+    iban: str | None = None  # what the user knows the account by, in the bank's own app
+    details: str | None = None
 
 
 @dataclass(frozen=True)
@@ -68,6 +71,9 @@ def _session(payload: dict[str, Any]) -> BankSession:
             uid=str(account["uid"]),
             identification_hash=account.get("identification_hash"),
             name=account.get("name"),
+            currency=account.get("currency"),
+            iban=(account.get("account_id") or {}).get("iban"),
+            details=account.get("details"),
         )
         for account in payload.get("accounts") or []
     )

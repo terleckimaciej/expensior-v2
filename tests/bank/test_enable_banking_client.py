@@ -105,8 +105,22 @@ def test_a_session_carries_its_accounts_and_when_it_expires(keys: tuple[str, str
         "session_id": "session-1",
         "access": {"valid_until": "2027-05-01T12:00:00Z"},
         "accounts": [
-            {"uid": "uid-1", "identification_hash": "hash-1", "name": "Main"},
-            {"uid": "uid-2", "identification_hash": "hash-2", "name": None},
+            {
+                "uid": "uid-1",
+                "identification_hash": "hash-1",
+                "name": "Main",
+                "currency": "PLN",
+                "account_id": {"iban": "PL00000000000000000000004821", "other": None},
+                "details": "Personal account",
+            },
+            {
+                "uid": "uid-2",
+                "identification_hash": "hash-2",
+                "name": None,
+                "currency": "USD",
+                "account_id": {"iban": None, "other": None},
+                "details": None,
+            },
         ],
     }
 
@@ -119,10 +133,13 @@ def test_a_session_carries_its_accounts_and_when_it_expires(keys: tuple[str, str
     assert isinstance(session, BankSession)
     assert session.session_id == "session-1"
     assert session.valid_until == datetime(2027, 5, 1, 12, 0, tzinfo=UTC)
-    assert [(a.uid, a.identification_hash) for a in session.accounts] == [
-        ("uid-1", "hash-1"),
-        ("uid-2", "hash-2"),
+    assert [(a.uid, a.identification_hash, a.currency) for a in session.accounts] == [
+        ("uid-1", "hash-1", "PLN"),
+        ("uid-2", "hash-2", "USD"),
     ]
+    assert session.accounts[0].iban == "PL00000000000000000000004821"
+    assert session.accounts[0].details == "Personal account"
+    assert session.accounts[1].iban is None
 
 
 def test_transactions_are_fetched_page_by_page_with_the_longest_history_first(
@@ -207,6 +224,7 @@ def test_the_client_is_built_from_the_settings_and_the_key_file(
     key_file = tmp_path / "key.pem"
     key_file.write_text(keys[0])
     settings = Settings(
+        _env_file=None,
         database_url="postgresql+psycopg://u:p@localhost/db",
         enable_banking_app_id="app-id-123",
         enable_banking_key_path=key_file,
@@ -217,8 +235,11 @@ def test_the_client_is_built_from_the_settings_and_the_key_file(
     assert isinstance(client, EnableBankingClient)
 
 
-def test_missing_settings_say_what_to_set() -> None:
-    settings = Settings(database_url="postgresql+psycopg://u:p@localhost/db")
+def test_missing_settings_say_what_to_set(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Not the developer's own .env or environment: the bank settings must really be absent.
+    for name in ("ENABLE_BANKING_APP_ID", "ENABLE_BANKING_KEY_PATH", "ENABLE_BANKING_REDIRECT_URL"):
+        monkeypatch.delenv(name, raising=False)
+    settings = Settings(_env_file=None, database_url="postgresql+psycopg://u:p@localhost/db")
 
     with pytest.raises(BankConfigError, match="ENABLE_BANKING_APP_ID"):
         EnableBankingClient.from_settings(settings)
