@@ -6,8 +6,10 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "alembic>=1.20.1",
+    "httpx>=0.28.1",
     "psycopg[binary]>=3.3.8",
     "pydantic-settings>=2.16.2",
+    "pyjwt[crypto]>=2.15.1",
     "sqlalchemy>=2.1.8",
 ]
 
@@ -61,20 +63,20 @@ root_package = "expensior"
 include_external_packages = true
 
 [[tool.importlinter.contracts]]
-name = "Layers point one way: cli -> services -> db -> domain"
+name = "Layers point one way: cli -> services -> (db | bank) -> domain"
 type = "layers"
 layers = [
     "expensior.cli",
     "expensior.services",
-    "expensior.db",
+    "expensior.db | expensior.bank",
     "expensior.domain",
 ]
 
 [[tool.importlinter.contracts]]
-name = "cli never imports db directly"
+name = "cli never imports db or bank directly"
 type = "forbidden"
 source_modules = ["expensior.cli"]
-forbidden_modules = ["expensior.db"]
+forbidden_modules = ["expensior.db", "expensior.bank"]
 allow_indirect_imports = true
 
 [[tool.importlinter.contracts]]
@@ -88,3 +90,9 @@ name = "domain never imports sqlalchemy"
 type = "forbidden"
 source_modules = ["expensior.domain"]
 forbidden_modules = ["sqlalchemy"]
+
+[[tool.importlinter.contracts]]
+name = "domain never imports an HTTP or JWT library"
+type = "forbidden"
+source_modules = ["expensior.domain"]
+forbidden_modules = ["httpx", "jwt"]

@@ -25,7 +25,7 @@ erDiagram
     accounts {
         bigint id PK
         text name
-        text source "pko_bp, enable_banking_pko"
+        text source "the bank, e.g. pko_bp"
         text external_ref "identification_hash from the API, null for CSV-only"
         text currency
     }

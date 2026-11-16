@@ -37,8 +37,9 @@ src/expensior/
     models.py          #   SQLAlchemy 2.0 typed models
     session.py         #   engine and session factory, from config
     unit_of_work.py    #   one database transaction, exposing the repositories
-    repositories/      #   batches, raw_rows, transactions, categories, rules, classifications
+    repositories/      #   accounts, batches, raw_rows, transactions, categories, rules, classifications
     queries/           #   reads from the SQL views, returning domain.readmodels
+  bank/                # clients of bank APIs: network I/O, beside db, independent of it (ADR 0011)
   services/            # use cases; the only place that opens a transaction
   cli/                 # command-line entry point (`expensior ...`)
   ui/                  # added in the UI stage; framework-specific

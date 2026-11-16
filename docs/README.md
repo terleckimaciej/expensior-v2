@@ -21,6 +21,7 @@ context resets (human and AI).
 | [0008](decisions/0008-open-work-in-github-issues.md) | Open work in GitHub issues, a Project as the status view, docs carry no status | Accepted |
 | [0009](decisions/0009-package-structure.md) | Code structure: a `src/` package in layers with one-way dependencies | Accepted |
 | [0010](decisions/0010-database-schema.md) | Database schema: accounts, three layers, append-only classification history | Accepted |
+| [0011](decisions/0011-bank-api-client.md) | The bank API client: a `bank` package, two dependencies, the key outside the repository | Proposed |
 
 New decision → copy [`0000-template.md`](decisions/0000-template.md), next number, add a row above.
 

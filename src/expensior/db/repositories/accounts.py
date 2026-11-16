@@ -37,6 +37,15 @@ class AccountRepository:
         self._session.flush()
         return _record(row)
 
+    def set_external_ref(self, account_id: int, external_ref: str) -> Account:
+        """Link an account to the bank API's identification of it; the database keeps it unique."""
+        row = self._session.get(models.Account, account_id)
+        if row is None:
+            raise LookupError(f"no account with id {account_id}")
+        row.external_ref = external_ref
+        self._session.flush()
+        return _record(row)
+
     def get_by_name(self, name: str) -> Account | None:
         row = self._session.scalar(select(models.Account).where(models.Account.name == name))
         return _record(row) if row else None

@@ -1,6 +1,7 @@
 """Application settings, read from environment variables and an optional ``.env`` file."""
 
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -11,6 +12,12 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
     database_url: str
+
+    # The bank API (Enable Banking). Optional: only the bank commands need them. The private key
+    # lives in a file outside the repository, and only its path is configured here.
+    enable_banking_app_id: str | None = None
+    enable_banking_key_path: Path | None = None
+    enable_banking_redirect_url: str | None = None
 
 
 @lru_cache

@@ -66,7 +66,7 @@ class Account(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
     name: Mapped[str] = mapped_column(Text)
-    source: Mapped[str] = mapped_column(Text)  # e.g. "pko_bp", "enable_banking_pko"
+    source: Mapped[str] = mapped_column(Text)  # the bank the account is at, e.g. "pko_bp"
     external_ref: Mapped[str | None] = mapped_column(Text)  # the API's identification hash
     currency: Mapped[str] = mapped_column(String(3), server_default="PLN")
 
