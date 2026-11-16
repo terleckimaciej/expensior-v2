@@ -38,6 +38,33 @@ _PKO_CSV_TYPES: dict[str, str] = {
 }
 
 
+# The codes the bank API gives as the second line of the description, on the same vocabulary.
+_ENABLE_BANKING_TYPES: dict[str, str] = {
+    "CARD-PAYMENT": "card_payment",
+    "CARD-PAYMENT-RETURN": "refund",
+    "MOBILE-PAYMENT-POS-NO-CARD-TX-CODE": "web_payment_blik",
+    "MOBILE-PAYMENT-POS-TX-CODE": "terminal_payment_blik",
+    "TRANSFER-IN": "transfer_to_account",
+    "TRANSFER": "transfer_from_account",
+    "MOBILE-PAYMENT-C2C-EXTERNAL": "transfer_blik",
+    "MOBILE-PAYMENT-C2C": "transfer_blik",
+    "STANDING-ORDER": "standing_order",
+    "AUTOSAVER": "auto_savings",
+    "TRANSPORT-TICKET-PAYMENT": "transport_ticket_payment",
+    "CURRENCY-EXCHANGE-DEBIT": "currency_exchange_debit",
+    # Matched to legacy types by name only: seen in the API history, not checked against a CSV.
+    "MOBILE-PAYMENT-POS-RETURN": "refund",
+    "CARD-FEE": "card_fee",
+    "CARD-ATM": "atm_withdrawal",
+    "MOBILE-PAYMENT-ATM-TX-CODE": "atm_withdrawal",
+}
+
+
+def normalise_enable_banking_type(code: str) -> str | None:
+    """The canonical name of an API type code, or ``None`` when it is not known."""
+    return _ENABLE_BANKING_TYPES.get(code.strip().upper())
+
+
 def normalise_pko_csv_type(csv_type: str) -> str | None:
     """The canonical name of a type from the CSV, or ``None`` when it is not known.
 

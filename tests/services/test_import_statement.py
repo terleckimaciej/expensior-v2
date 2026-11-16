@@ -5,6 +5,7 @@ from datetime import date
 from decimal import Decimal
 
 import pytest
+from eb_samples import api_transaction
 from pko_samples import CSV_CP1250
 from sqlalchemy import func, select
 
@@ -13,6 +14,7 @@ from expensior.db.unit_of_work import UnitOfWork
 from expensior.domain.identity import transaction_id_for
 from expensior.domain.records import Transaction
 from expensior.domain.statements.adapted import AdaptedStatement
+from expensior.domain.statements.enable_banking import make_document
 from expensior.domain.statements.formats import Unrecognised
 from expensior.domain.statements.pko_csv import PKO_BP_V1_SOURCE
 from expensior.domain.statements.raw import RawBatch, RawRow
@@ -223,3 +225,51 @@ def test_the_service_does_not_know_the_format(uow_factory: UowFactory) -> None:
     assert result.status is ImportStatus.IMPORTED
     assert result.format_version == "fake_v1"
     assert _count(uow_factory, models.Transaction) == 1
+
+
+def _api_document() -> bytes:
+    """The two transactions of the synthetic CSV, as the bank API would give them."""
+    card = api_transaction()
+    transfer = api_transaction(
+        booking_date="2026-01-16",
+        credit_debit_indicator="CRDT",
+        transaction_amount={"amount": "1700.00", "currency": "PLN"},
+        balance_after_transaction={"amount": "1800.00", "currency": "PLN"},
+        remittance_information=["CZYNSZ ZA WRZESIEŃ", "TRANSFER-IN"],
+    )
+    return make_document(
+        [card, transfer], fetched_at="2026-11-15T10:00:00Z", identification_hash="hash-1"
+    )
+
+
+def test_a_csv_after_the_api_does_not_duplicate_what_the_api_already_gave(
+    uow_factory: UowFactory,
+) -> None:
+    _add_account(uow_factory)
+    from_api = import_statement(uow_factory, data=_api_document(), account_name="main")
+
+    from_csv = import_statement(uow_factory, data=CSV_CP1250, account_name="main")
+
+    assert from_api.format_version == "enable_banking_pko_v1"
+    assert from_api.inserted == 2
+    assert (from_csv.inserted, from_csv.skipped_existing, from_csv.holds) == (0, 2, 1)
+    assert _count(uow_factory, models.Transaction) == 2
+
+
+def test_a_csv_with_replace_enriches_what_the_api_gave(uow_factory: UowFactory) -> None:
+    _add_account(uow_factory)
+    import_statement(uow_factory, data=_api_document(), account_name="main")
+
+    result = import_statement(
+        uow_factory, data=CSV_CP1250, account_name="main", policy=ConflictPolicy.REPLACE
+    )
+
+    assert (result.inserted, result.replaced) == (0, 2)
+    with uow_factory() as uow:
+        rows = uow.session.scalars(select(models.Transaction)).all()
+        card = next(row for row in rows if row.transaction_type == "card_payment")
+        assert (card.description, card.city, card.country) == (
+            "SKLEP PRZYKŁAD",
+            "WARSZAWA",
+            "POLSKA",
+        )

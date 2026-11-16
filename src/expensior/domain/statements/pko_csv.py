@@ -6,15 +6,11 @@ data, so one broken row does not hide the rest and the import can report it.
 
 import csv
 import re
-from collections import Counter
 from collections.abc import Iterable
-from dataclasses import dataclass
-from datetime import date
-from decimal import Decimal, InvalidOperation
 
 from expensior.domain.identity import transaction_id_for
 from expensior.domain.records import Transaction
-from expensior.domain.statements.adapted import AdaptedStatement, Invalid
+from expensior.domain.statements.adapted import AdaptedStatement, Hold, Invalid, Parsed, collect
 from expensior.domain.statements.decoding import DecodingError, decode
 from expensior.domain.statements.formats import (
     PKO_BP_V1,
@@ -25,6 +21,7 @@ from expensior.domain.statements.formats import (
 from expensior.domain.statements.raw import RawBatch, RawRow, parse_raw
 from expensior.domain.statements.source import Source
 from expensior.domain.statements.transaction_types import HOLD_TYPE, normalise_pko_csv_type
+from expensior.domain.statements.values import parse_date, parse_money
 
 # The columns with a name of their own; every other cell of a row belongs to the description.
 _NAMED_COLUMNS = {
@@ -35,43 +32,11 @@ _NAMED_COLUMNS = {
     "Waluta",
     "Saldo po transakcji",
 }
-_CENT = Decimal("0.01")
 _LOCATION_ADDRESS = re.compile(r"Adres:\s*(.*?)\s*Miasto:")
 _LOCATION_ADDRESS_ANY = re.compile(r"Adres:\s*(.*)")
 _LOCATION_CITY = re.compile(r"Miasto:\s*(.*?)\s*Kraj:")
 _LOCATION_COUNTRY = re.compile(r"Kraj:\s*(.*)")
 _TITLE_END = re.compile(r"\s+OD:")
-
-
-@dataclass(frozen=True)
-class Parsed:
-    """A transaction; ``unknown_type`` is the bank's type text when it is not in the vocabulary."""
-
-    transaction: Transaction
-    unknown_type: str | None
-
-
-@dataclass(frozen=True)
-class Hold:
-    """A hold ("Blokada"): not a transaction, the payment arrives later as a booked row."""
-
-    line_no: int
-
-
-def _date(text: str) -> date:
-    return date.fromisoformat(text.strip())
-
-
-def _money(text: str) -> Decimal:
-    """An amount as the bank writes it: a sign, spaces, a point or a comma; at most two decimals."""
-    cleaned = text.replace("\xa0", "").replace(" ", "").replace(",", ".")
-    try:
-        value = Decimal(cleaned)
-        if not value.is_finite() or value != value.quantize(_CENT):
-            raise ValueError(f"not an amount with at most two decimals: {text!r}")
-    except InvalidOperation as error:
-        raise ValueError(f"not an amount: {text!r}") from error
-    return value
 
 
 def _labelled(row: RawRow) -> dict[str, str]:
@@ -114,11 +79,11 @@ def adapt_row(row: RawRow, account_id: int, batch_id: int) -> Parsed | Hold | In
     if csv_type == HOLD_TYPE:
         return Hold(line_no=row.line_no)
     try:
-        operation_date = _date(cells.get("Data operacji", ""))
+        operation_date = parse_date(cells.get("Data operacji", ""))
         value_text = cells.get("Data waluty", "").strip()
-        value_date = _date(value_text) if value_text else None
-        amount = _money(cells.get("Kwota", ""))
-        balance_after = _money(cells.get("Saldo po transakcji", ""))
+        value_date = parse_date(value_text) if value_text else None
+        amount = parse_money(cells.get("Kwota", ""))
+        balance_after = parse_money(cells.get("Saldo po transakcji", ""))
     except ValueError as error:
         return Invalid(line_no=row.line_no, reason=str(error))
     currency = cells.get("Waluta", "").strip().upper()
@@ -146,26 +111,7 @@ def adapt_row(row: RawRow, account_id: int, batch_id: int) -> Parsed | Hold | In
 
 def adapt_rows(rows: Iterable[RawRow], account_id: int, batch_id: int) -> AdaptedStatement:
     """Adapt every row and count what was left out."""
-    transactions: list[Transaction] = []
-    invalid: list[Invalid] = []
-    unknown: Counter[str] = Counter()
-    holds = 0
-    for row in rows:
-        result = adapt_row(row, account_id, batch_id)
-        if isinstance(result, Parsed):
-            transactions.append(result.transaction)
-            if result.unknown_type is not None:
-                unknown[result.unknown_type] += 1
-        elif isinstance(result, Hold):
-            holds += 1
-        else:
-            invalid.append(result)
-    return AdaptedStatement(
-        transactions=tuple(transactions),
-        holds=holds,
-        invalid=tuple(invalid),
-        unknown_types=dict(unknown),
-    )
+    return collect(adapt_row(row, account_id, batch_id) for row in rows)
 
 
 def read_pko_csv(data: bytes) -> RawBatch | Unrecognised:

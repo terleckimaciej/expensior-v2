@@ -124,6 +124,8 @@ Names are provisional and settle as the code is written; the responsibilities ar
 | `plan.py` | `plan_import` and `ImportPlan`: incoming transactions + existing ids + a `ConflictPolicy` (`ignore \| replace \| abort`, in `types.py`) → what would be inserted, replaced, skipped |
 | `source.py`, `registry.py` | a `Source` (how to read bytes into raw rows, how to adapt them) and the registry that finds the one that recognises the bytes; the import service knows no format, so the bank API is one more entry |
 | `pko_csv.py`, `transaction_types.py` | the PKO BP CSV source: a raw row → a transaction (or a hold, or an invalid row), and the type vocabulary of legacy |
+| `enable_banking.py` | the bank API source: a stored JSON document → one raw row per transaction → a transaction, mapped onto the same type vocabulary |
+| `adapted.py`, `values.py` | what every adapter returns (`Parsed`, `Hold`, `Invalid`, and `collect` to sum a statement up) and the shared reading of dates and amounts |
 
 **`domain/rules/`**: `conditions.py` (typed Pydantic conditions), `engine.py` (priority order, first match wins, only
 unclassified input), `validation.py` (a regex is validated when a rule is saved).

@@ -81,9 +81,23 @@ Compared on the last three months of one account:
   from it on about 85% of rows, and the API has no such field.
 - **Holds:** the CSV contains `Blokada` rows (no operation date, balance "W rozliczeniu"). The same payment later
   appears as a booked row with a different type and date. The API returns booked transactions only.
-- **Description:** for card payments the API line equals the merchant part of the CSV "Lokalizacja: Adres:". The CSV
-  also has city and country as separate parts and a "Tytuł" that is only a reference code for cards; the API has
-  neither. For transfers the API line corresponds to the title or counterparty cells of the CSV.
+- **Description, card payments:** the first line of `remittance_information` is the city, the merchant and a
+  two-letter country code written together with no separator (in 215 of 218 card payments it fits that shape
+  exactly). The CSV keeps merchant, city and country name apart, so from the API the merchant cannot be told from
+  the city; a rule that looks for a phrase inside the description still matches.
+- **Description, transfers and standing orders:** the first line equals the CSV title, once whitespace is
+  collapsed (17 of 17 rows). For BLIK phone transfers the first line contains the CSV title and more text (8 of
+  11), so it is longer than the CSV description.
+- **Description, BLIK payments, tickets, refunds and currency exchange:** the first line is a reference number or
+  other text, and no other field of the transaction carries the merchant (searched in every field). Those
+  transactions (about 9% of the three months compared) have no merchant name from the API at all, while the CSV
+  has it.
+- **Type codes:** the eleven codes seen in the comparison map one to one to the CSV types (276 of 276). Four more
+  appear in the two-year history and not in the CSV window: `MOBILE-PAYMENT-POS-RETURN` (12), `CARD-FEE` (4),
+  `CARD-ATM` (3), `MOBILE-PAYMENT-ATM-TX-CODE` (1). They correspond by name to the legacy types `refund`,
+  `card_fee`, `atm_withdrawal` and `atm_withdrawal`; that mapping is inferred, not checked against a CSV.
+- **What follows:** the CSV is the richer source for descriptions (merchant, city, country), the API the fresher
+  one. A CSV imported with the conflict policy `replace` therefore enriches transactions the API created first.
 - **Encoding:** the CSV is `cp1250` (mojibake when read as UTF-8); the API is UTF-8.
 
 ## Open

@@ -1,17 +1,18 @@
 """The registry of sources: which one recognises a given set of bytes (ADR 0007).
 
-Adding a source (the bank API of stage 2c's neighbour issue) is one more entry in ``SOURCES``.
+Adding a source is one more entry in ``SOURCES``.
 """
 
 from collections.abc import Sequence
 from dataclasses import dataclass
 
+from expensior.domain.statements.enable_banking import ENABLE_BANKING_PKO_V1_SOURCE
 from expensior.domain.statements.formats import Unrecognised
 from expensior.domain.statements.pko_csv import PKO_BP_V1_SOURCE
 from expensior.domain.statements.raw import RawBatch
 from expensior.domain.statements.source import Source
 
-SOURCES: tuple[Source, ...] = (PKO_BP_V1_SOURCE,)
+SOURCES: tuple[Source, ...] = (PKO_BP_V1_SOURCE, ENABLE_BANKING_PKO_V1_SOURCE)
 
 
 @dataclass(frozen=True)

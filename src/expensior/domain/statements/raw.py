@@ -9,14 +9,19 @@ import csv
 import io
 from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import Any
 
 
 @dataclass(frozen=True)
 class RawRow:
-    """One record of the file: the line it starts on and its cells, keyed by the header."""
+    """One record: the line (or position) it starts on and its cells, keyed by name.
+
+    For a file the cells are text keyed by the header. For a bank API the cells are the transaction
+    object as received, so the values are JSON values.
+    """
 
     line_no: int
-    cells: dict[str, str]
+    cells: dict[str, Any]
 
 
 @dataclass(frozen=True)
