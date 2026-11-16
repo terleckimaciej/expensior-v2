@@ -121,7 +121,9 @@ Names are provisional and settle as the code is written; the responsibilities ar
 | `decoding.py` | bytes → text: UTF-8 (strict) first, else cp1250; the lossy mojibake variants of type names are handled by the adapter's lookup, not here |
 | `raw.py` | `RawBatch` / `RawRow`: the header and the cells as text, no interpretation |
 | `identity.py` | stable `transaction_id` from account, operation date, signed amount and balance after (ADR 0010); lives in `domain/identity.py`, since the id does not depend on the source |
-| `plan.py` | `ConflictPolicy` (`ignore \| replace \| abort`) and `ImportPlan`: incoming ids + existing ids → what would be inserted, skipped, replaced |
+| `plan.py` | `plan_import` and `ImportPlan`: incoming transactions + existing ids + a `ConflictPolicy` (`ignore \| replace \| abort`, in `types.py`) → what would be inserted, replaced, skipped |
+| `source.py`, `registry.py` | a `Source` (how to read bytes into raw rows, how to adapt them) and the registry that finds the one that recognises the bytes; the import service knows no format, so the bank API is one more entry |
+| `pko_csv.py`, `transaction_types.py` | the PKO BP CSV source: a raw row → a transaction (or a hold, or an invalid row), and the type vocabulary of legacy |
 
 **`domain/rules/`**: `conditions.py` (typed Pydantic conditions), `engine.py` (priority order, first match wins, only
 unclassified input), `validation.py` (a regex is validated when a rule is saved).

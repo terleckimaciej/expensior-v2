@@ -6,9 +6,9 @@ from decimal import Decimal
 from pko_samples import CSV_TEXT
 
 from expensior.domain.identity import transaction_id_for
+from expensior.domain.statements.adapted import Invalid
 from expensior.domain.statements.pko_csv import (
     Hold,
-    Invalid,
     Parsed,
     adapt_row,
     adapt_rows,

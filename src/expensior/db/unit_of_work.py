@@ -16,6 +16,7 @@ from typing import Self
 
 from sqlalchemy.orm import Session
 
+from expensior.db.repositories.accounts import AccountRepository
 from expensior.db.repositories.batches import BatchRepository
 from expensior.db.repositories.categories import CategoryRepository
 from expensior.db.repositories.classifications import ClassificationRepository
@@ -28,6 +29,7 @@ class UnitOfWork:
     """One session and its repositories; commit is explicit, anything else rolls back."""
 
     session: Session
+    accounts: AccountRepository
     batches: BatchRepository
     raw_rows: RawRowRepository
     transactions: TransactionRepository
@@ -40,6 +42,7 @@ class UnitOfWork:
 
     def __enter__(self) -> Self:
         self.session = self._session_factory()
+        self.accounts = AccountRepository(self.session)
         self.batches = BatchRepository(self.session)
         self.raw_rows = RawRowRepository(self.session)
         self.transactions = TransactionRepository(self.session)

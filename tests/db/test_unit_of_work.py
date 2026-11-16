@@ -1,32 +1,11 @@
 """The unit of work commits only when told to, and rolls back otherwise."""
 
-from collections.abc import Iterator
-
 import pytest
-from sqlalchemy import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from expensior.db.unit_of_work import UnitOfWork
 
 pytestmark = pytest.mark.db
-
-
-@pytest.fixture
-def session_factory(migrated_engine: Engine) -> Iterator[sessionmaker[Session]]:
-    """Sessions on one connection inside an outer transaction that is rolled back after the test.
-
-    A real ``commit()`` in the test releases a savepoint only, so the next unit of work sees the
-    result and the test database stays clean.
-    """
-    connection = migrated_engine.connect()
-    transaction = connection.begin()
-    try:
-        yield sessionmaker(
-            bind=connection, join_transaction_mode="create_savepoint", expire_on_commit=False
-        )
-    finally:
-        transaction.rollback()
-        connection.close()
 
 
 def _root_names(factory: sessionmaker[Session]) -> list[str]:
