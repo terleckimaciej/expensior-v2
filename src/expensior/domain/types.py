@@ -38,3 +38,11 @@ class MatchType(StrEnum):
 
     CONTAINS = "contains"
     REGEX = "regex"
+
+
+class ConflictPolicy(StrEnum):
+    """What an import does with a transaction that is already stored."""
+
+    IGNORE = "ignore"  # keep the stored one, skip the incoming one
+    REPLACE = "replace"  # overwrite the stored fields; its classification history is untouched
+    ABORT = "abort"  # stop: nothing is written

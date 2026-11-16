@@ -1,7 +1,7 @@
 """Shared fixtures. The ``db`` fixtures run against a throwaway local Postgres, never a real one."""
 
 import os
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 import pytest
@@ -10,9 +10,10 @@ from alembic.config import Config
 from sqlalchemy import Engine, create_engine, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import OperationalError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, sessionmaker
 
 from expensior.db.session import database_host, make_engine
+from expensior.db.unit_of_work import UnitOfWork
 
 # The credentials of the throwaway Postgres from docker-compose.yml.
 DEFAULT_TEST_DATABASE_URL = "postgresql+psycopg://expensior:expensior@localhost:5432/expensior_test"  # noqa: E501  # pragma: allowlist secret
@@ -96,3 +97,27 @@ def db_session(migrated_engine: Engine) -> Iterator[Session]:
         session.close()
         transaction.rollback()
         connection.close()
+
+
+@pytest.fixture
+def session_factory(migrated_engine: Engine) -> Iterator[sessionmaker[Session]]:
+    """Sessions on one connection inside an outer transaction that is rolled back after the test.
+
+    A real ``commit()`` in the test releases a savepoint only, so the next unit of work sees the
+    result and the test database stays clean.
+    """
+    connection = migrated_engine.connect()
+    transaction = connection.begin()
+    try:
+        yield sessionmaker(
+            bind=connection, join_transaction_mode="create_savepoint", expire_on_commit=False
+        )
+    finally:
+        transaction.rollback()
+        connection.close()
+
+
+@pytest.fixture
+def uow_factory(session_factory: sessionmaker[Session]) -> Callable[[], UnitOfWork]:
+    """What a service is given to open its units of work."""
+    return lambda: UnitOfWork(session_factory)

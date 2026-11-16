@@ -4,6 +4,7 @@ A pure function over one row. A row is a transaction, a hold, or invalid; nothin
 data, so one broken row does not hide the rest and the import can report it.
 """
 
+import csv
 import re
 from collections import Counter
 from collections.abc import Iterable
@@ -13,7 +14,16 @@ from decimal import Decimal, InvalidOperation
 
 from expensior.domain.identity import transaction_id_for
 from expensior.domain.records import Transaction
-from expensior.domain.statements.raw import RawRow
+from expensior.domain.statements.adapted import AdaptedStatement, Invalid
+from expensior.domain.statements.decoding import DecodingError, decode
+from expensior.domain.statements.formats import (
+    PKO_BP_V1,
+    StatementFormat,
+    Unrecognised,
+    detect_format,
+)
+from expensior.domain.statements.raw import RawBatch, RawRow, parse_raw
+from expensior.domain.statements.source import Source
 from expensior.domain.statements.transaction_types import HOLD_TYPE, normalise_pko_csv_type
 
 # The columns with a name of their own; every other cell of a row belongs to the description.
@@ -46,24 +56,6 @@ class Hold:
     """A hold ("Blokada"): not a transaction, the payment arrives later as a booked row."""
 
     line_no: int
-
-
-@dataclass(frozen=True)
-class Invalid:
-    """A row that cannot be read, with the reason."""
-
-    line_no: int
-    reason: str
-
-
-@dataclass(frozen=True)
-class AdaptedStatement:
-    """All rows of a statement: the transactions and what was left out, for the batch audit."""
-
-    transactions: tuple[Transaction, ...]
-    holds: int
-    invalid: tuple[Invalid, ...]
-    unknown_types: dict[str, int]
 
 
 def _date(text: str) -> date:
@@ -174,3 +166,26 @@ def adapt_rows(rows: Iterable[RawRow], account_id: int, batch_id: int) -> Adapte
         invalid=tuple(invalid),
         unknown_types=dict(unknown),
     )
+
+
+def read_pko_csv(data: bytes) -> RawBatch | Unrecognised:
+    """Read the bytes as a PKO BP CSV, or say that they are not one.
+
+    Bytes that cannot be decoded or split are "not recognised" too: the import keeps them anyway.
+    """
+    try:
+        batch = parse_raw(decode(data).text)
+    except (DecodingError, csv.Error):
+        return Unrecognised(header=())
+    known = detect_format(batch.header)
+    if isinstance(known, StatementFormat) and known.version == PKO_BP_V1.version:
+        return batch
+    return Unrecognised(header=batch.header)
+
+
+PKO_BP_V1_SOURCE = Source(
+    source=PKO_BP_V1.source,
+    version=PKO_BP_V1.version,
+    read=read_pko_csv,
+    adapt=adapt_rows,
+)

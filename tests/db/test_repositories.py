@@ -1,5 +1,6 @@
 """The repositories read and write domain records; classification history stays append-only."""
 
+from dataclasses import replace
 from datetime import date
 from decimal import Decimal
 
@@ -7,6 +8,7 @@ import pytest
 from sqlalchemy.orm import Session
 
 from expensior.db import models
+from expensior.db.repositories.accounts import AccountRepository
 from expensior.db.repositories.batches import BatchRepository
 from expensior.db.repositories.categories import CategoryRepository
 from expensior.db.repositories.classifications import ClassificationRepository
@@ -200,3 +202,32 @@ def test_classifying_again_keeps_the_history_and_one_current_entry(db_session: S
     assert [entry.category_id for entry in history] == [food.id, home.id, fun.id]
     assert [entry.is_current for entry in history] == [False, False, True]
     assert current == history[-1]
+
+
+def test_accounts_are_found_by_name_and_by_external_reference(db_session: Session) -> None:
+    accounts = AccountRepository(db_session)
+    main = accounts.add("main", "pko_bp")
+    api = accounts.add("api", "enable_banking_pko", external_ref="hash-1")
+
+    assert accounts.get_by_name("main") == main
+    assert accounts.get_by_name("missing") is None
+    assert accounts.get_by_external_ref("enable_banking_pko", "hash-1") == api
+    assert accounts.get_by_external_ref("pko_bp", "hash-1") is None
+    assert [account.name for account in accounts.list_all()] == ["api", "main"]
+
+
+def test_replacing_a_transaction_keeps_its_classification_history(db_session: Session) -> None:
+    stored = _stored_transaction(db_session)
+    food = CategoryRepository(db_session).add("Food")
+    classifications = ClassificationRepository(db_session)
+    classifications.add(stored.transaction_id, food.id, ClassificationMethod.MANUAL)
+    transactions = TransactionRepository(db_session)
+
+    transactions.replace_many([replace(stored, description="OTHER SHOP", city="KRAKÓW")])
+    db_session.expire_all()
+
+    loaded = transactions.get(stored.transaction_id)
+    assert loaded is not None
+    assert (loaded.description, loaded.city) == ("OTHER SHOP", "KRAKÓW")
+    current = classifications.current(stored.transaction_id)
+    assert current is not None and current.category_id == food.id

@@ -4,7 +4,7 @@ from collections.abc import Collection, Iterable, Sequence
 from dataclasses import asdict
 from typing import Any
 
-from sqlalchemy import insert, select
+from sqlalchemy import insert, select, update
 from sqlalchemy.orm import Session
 
 from expensior.db import models
@@ -50,6 +50,16 @@ class TransactionRepository:
             return
         rows: list[dict[str, Any]] = [asdict(transaction) for transaction in transactions]
         self._session.execute(insert(models.Transaction), rows)
+
+    def replace_many(self, transactions: Sequence[Transaction]) -> None:
+        """Overwrite the stored fields of existing transactions, matched by id. Does not commit.
+
+        Only the ``transactions`` table is touched: the classification history stays as it is.
+        """
+        if not transactions:
+            return
+        rows: list[dict[str, Any]] = [asdict(transaction) for transaction in transactions]
+        self._session.execute(update(models.Transaction), rows)
 
     def existing_ids(self, ids: Collection[TransactionId]) -> set[TransactionId]:
         """Which of the given ids are already stored: what an idempotent import needs to know."""
