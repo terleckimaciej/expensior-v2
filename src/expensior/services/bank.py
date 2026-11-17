@@ -55,7 +55,11 @@ class BankClient(Protocol):
     def get_session(self, session_id: str) -> BankSession: ...
 
     def fetch_transactions(
-        self, account_uid: str, *, date_from: date | None = None
+        self,
+        account_uid: str,
+        *,
+        date_from: date | None = None,
+        on_page: Callable[[int, int], None] | None = None,
     ) -> list[dict[str, Any]]: ...
 
 
@@ -190,8 +194,12 @@ def fetch_for_account(
     date_from: date | None = None,
     policy: ConflictPolicy = ConflictPolicy.IGNORE,
     dry_run: bool = False,
+    on_page: Callable[[int, int], None] | None = None,
 ) -> FetchOutcome:
-    """Fetch and import the transactions of a connected account."""
+    """Fetch and import the transactions of a connected account.
+
+    ``on_page`` is told the number of each page fetched and the transactions so far.
+    """
     with uow_factory() as uow:
         account = uow.accounts.get_by_name(account_name)
     if account is None:
@@ -223,6 +231,7 @@ def fetch_for_account(
         policy=policy,
         dry_run=dry_run,
         clock=lambda: now,
+        on_page=on_page,
     )
     left = days_left(account.consent_valid_until, now) if account.consent_valid_until else None
     return FetchOutcome(result=result, consent=status, days_left=left)

@@ -37,9 +37,15 @@ class FakeFetcher:
         self.calls: list[tuple[str, date | None]] = []
 
     def fetch_transactions(
-        self, account_uid: str, *, date_from: date | None = None
+        self,
+        account_uid: str,
+        *,
+        date_from: date | None = None,
+        on_page: Callable[[int, int], None] | None = None,
     ) -> list[dict[str, Any]]:
         self.calls.append((account_uid, date_from))
+        if on_page is not None:
+            on_page(1, len(self.transactions))
         return self.transactions
 
 
@@ -163,6 +169,18 @@ def test_the_start_date_goes_to_the_client(uow_factory: UowFactory) -> None:
     _fetch(uow_factory, fetcher)
 
     assert fetcher.calls == [("uid-1", date(2026, 11, 1)), ("uid-1", None)]
+
+
+def test_the_progress_callback_reaches_the_client(uow_factory: UowFactory) -> None:
+    pages: list[tuple[int, int]] = []
+
+    _fetch(
+        uow_factory,
+        FakeFetcher(_transactions()),
+        on_page=lambda page, total: pages.append((page, total)),
+    )
+
+    assert pages == [(1, 2)]
 
 
 def test_a_bank_account_without_a_hash_is_refused(uow_factory: UowFactory) -> None:

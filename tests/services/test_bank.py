@@ -63,9 +63,15 @@ class FakeBank:
         return self.session
 
     def fetch_transactions(
-        self, account_uid: str, *, date_from: date | None = None
+        self,
+        account_uid: str,
+        *,
+        date_from: date | None = None,
+        on_page: Callable[[int, int], None] | None = None,
     ) -> list[dict[str, Any]]:
         self.calls.append(f"fetch:{account_uid}")
+        if on_page is not None:
+            on_page(1, 1)
         return [api_transaction()]
 
 
@@ -244,6 +250,22 @@ def test_fetching_imports_the_transactions_of_a_connected_account(uow_factory: U
     assert outcome.result.status is ImportStatus.IMPORTED and outcome.result.inserted == 1
     assert outcome.consent is ConsentStatus.OK and outcome.days_left == 170
     assert bank.calls == ["get_session:session-1", "fetch:uid-1"]
+
+
+def test_the_progress_of_a_fetch_is_reported(uow_factory: UowFactory) -> None:
+    bank = FakeBank()
+    _connected(uow_factory, bank)
+    pages: list[tuple[int, int]] = []
+
+    fetch_for_account(
+        uow_factory,
+        bank,
+        account_name="main",
+        now=NOW,
+        on_page=lambda page, total: pages.append((page, total)),
+    )
+
+    assert pages == [(1, 1)]
 
 
 def test_a_dry_run_fetches_but_writes_nothing(uow_factory: UowFactory) -> None:

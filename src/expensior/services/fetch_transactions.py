@@ -31,7 +31,11 @@ class TransactionFetcher(Protocol):
     """The part of a bank client this service needs."""
 
     def fetch_transactions(
-        self, account_uid: str, *, date_from: date | None = None
+        self,
+        account_uid: str,
+        *,
+        date_from: date | None = None,
+        on_page: Callable[[int, int], None] | None = None,
     ) -> list[dict[str, Any]]: ...
 
 
@@ -95,6 +99,7 @@ def fetch_transactions(
     policy: ConflictPolicy = ConflictPolicy.IGNORE,
     dry_run: bool = False,
     clock: Callable[[], datetime] = lambda: datetime.now(UTC),
+    on_page: Callable[[int, int], None] | None = None,
 ) -> ImportResult:
     """Fetch the booked transactions of a bank account and import them into ``account_name``.
 
@@ -104,7 +109,7 @@ def fetch_transactions(
     if bank_account.identification_hash is None:
         raise ValueError("the bank account has no identification hash to tell it by")
     account = _resolve_account(uow_factory, bank_account, account_name, dry_run=dry_run)
-    transactions = client.fetch_transactions(bank_account.uid, date_from=date_from)
+    transactions = client.fetch_transactions(bank_account.uid, date_from=date_from, on_page=on_page)
     fetched_at = clock().astimezone(UTC)
     document = make_document(
         transactions,

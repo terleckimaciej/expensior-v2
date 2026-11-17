@@ -135,9 +135,30 @@ def _connect(args: argparse.Namespace, context: Context) -> int:
     return 0
 
 
+class _Progress:
+    """Shows that a slow fetch is alive: a refreshed line on a terminal, else a line per page."""
+
+    def __init__(self) -> None:
+        self._live = sys.stdout.isatty()
+        self._shown = False
+
+    def __call__(self, page: int, total: int) -> None:
+        text = f"  page {page}, {total} transactions so far"
+        print(f"\r{text}" if self._live else text, end="" if self._live else "\n", flush=True)
+        self._shown = True
+
+    def finish(self) -> None:
+        """End the refreshed line, so that what is printed next starts on a new one."""
+        if self._live and self._shown:
+            print()
+        self._shown = False
+
+
 def _fetch_one(
     name: str, args: argparse.Namespace, runtime: Runtime, client: BankClient, context: Context
 ) -> int:
+    print(f"Fetching {name} from the bank, this can take a few minutes...", flush=True)
+    progress = _Progress()
     try:
         outcome = fetch_for_account(
             runtime.uow_factory,
@@ -147,13 +168,18 @@ def _fetch_one(
             date_from=args.since,
             policy=ConflictPolicy(args.on_conflict),
             dry_run=args.dry_run,
+            on_page=progress,
         )
     except (AccountNotFoundError, NotConnectedError) as error:
+        progress.finish()
         return _error(f"{error}; connect it with: expensior bank connect")
     except ConsentExpiredError as error:
+        progress.finish()
         return _error(f"{error}; renew it with: expensior bank connect")
     except BankApiError as error:
+        progress.finish()
         return _error(str(error))
+    progress.finish()
     for line in describe_import(outcome.result):
         print(line)
     if outcome.consent is ConsentStatus.EXPIRING:

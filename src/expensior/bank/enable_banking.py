@@ -225,9 +225,11 @@ class EnableBankingClient:
             params["strategy"] = "default"
             params["date_from"] = date_from.isoformat()
         transactions: list[dict[str, Any]] = []
-        for _ in range(_MAX_PAGES):
+        for page_number in range(1, _MAX_PAGES + 1):
             page = self._request("GET", f"/accounts/{account_uid}/transactions", params=params)
             transactions.extend(page.get("transactions") or [])
+            if on_page is not None:
+                on_page(page_number, len(transactions))
             continuation_key = page.get("continuation_key")
             if not continuation_key:
                 return transactions

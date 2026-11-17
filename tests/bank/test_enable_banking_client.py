@@ -142,6 +142,37 @@ def test_a_session_carries_its_accounts_and_when_it_expires(keys: tuple[str, str
     assert session.accounts[1].iban is None
 
 
+def test_reading_a_session_again_uses_the_shape_the_api_gives_for_it(
+    keys: tuple[str, str],
+) -> None:
+    # What GET /sessions/{id} returns: ids in `accounts`, the pairs in `accounts_data`, no id.
+    payload = {
+        "access": {"valid_until": "2027-05-01T12:00:00Z"},
+        "accounts": ["uid-1", "uid-2"],
+        "accounts_data": [
+            {"uid": "uid-1", "identification_hash": "hash-1"},
+            {"uid": "uid-2", "identification_hash": "hash-2"},
+        ],
+        "aspsp": {"name": "PKO Bank Polski", "country": "PL"},
+        "status": "AUTHORIZED",
+    }
+    seen: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(200, json=payload)
+
+    session = _client(handler, keys[0]).get_session("session-9")
+
+    assert seen[0].url.path == "/sessions/session-9"
+    assert session.session_id == "session-9"
+    assert session.valid_until == datetime(2027, 5, 1, 12, 0, tzinfo=UTC)
+    assert [(a.uid, a.identification_hash) for a in session.accounts] == [
+        ("uid-1", "hash-1"),
+        ("uid-2", "hash-2"),
+    ]
+
+
 def test_transactions_are_fetched_page_by_page_with_the_longest_history_first(
     keys: tuple[str, str],
 ) -> None:
@@ -162,6 +193,24 @@ def test_transactions_are_fetched_page_by_page_with_the_longest_history_first(
     assert first.url.path == "/accounts/uid-1/transactions"
     assert dict(first.url.params) == {"transaction_status": "BOOK", "strategy": "longest"}
     assert second.url.params["continuation_key"] == "next"
+
+
+def test_each_page_is_reported_with_the_transactions_so_far(keys: tuple[str, str]) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if "continuation_key" not in request.url.params:
+            return httpx.Response(
+                200, json={"transactions": [{"n": 1}, {"n": 2}], "continuation_key": "next"}
+            )
+        return httpx.Response(200, json={"transactions": [{"n": 3}], "continuation_key": None})
+
+    pages: list[tuple[int, int]] = []
+
+    transactions = _client(handler, keys[0]).fetch_transactions(
+        "uid-1", on_page=lambda page, total: pages.append((page, total))
+    )
+
+    assert pages == [(1, 2), (2, 3)]
+    assert len(transactions) == 3
 
 
 def test_a_start_date_asks_for_the_default_strategy_from_that_date(keys: tuple[str, str]) -> None:

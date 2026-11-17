@@ -293,6 +293,25 @@ def test_a_fetch_without_a_name_takes_every_connected_account(
     )
 
 
+def test_a_slow_fetch_says_it_is_working_and_shows_its_progress(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    def fetch(*_: Any, on_page: Any, **__: Any) -> FetchOutcome:
+        on_page(1, 120)
+        on_page(2, 250)
+        return _outcome()
+
+    _patch(monkeypatch, bank_command, "fetch_for_account", fetch)
+
+    assert main(["bank", "fetch", "main", "--yes"], context=_context()) == 0
+
+    out = capsys.readouterr().out
+    assert "Fetching main from the bank, this can take a few minutes..." in out
+    assert "page 1, 120 transactions so far" in out
+    assert "page 2, 250 transactions so far" in out
+    assert out.index("page 2") < out.index("Batch 7 is imported")
+
+
 def test_a_fetch_with_a_name_takes_only_that_account(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
