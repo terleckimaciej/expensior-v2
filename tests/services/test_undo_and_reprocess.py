@@ -34,9 +34,17 @@ DAY = date(2026, 3, 1)
 
 
 def make_source(
-    *, variant: str, adapt_lines: tuple[int, ...] = (1,), description: str, amount: str = "-1.00"
+    *,
+    variant: str,
+    adapt_lines: tuple[int, ...] = (1,),
+    description: str,
+    amount: str = "-1.00",
+    overrides: dict[int, str] | None = None,
 ) -> Source:
-    """A source that reads ``FAKE n`` as n raw rows and adapts the lines in ``adapt_lines``."""
+    """A source that reads ``FAKE n`` as n raw rows and adapts the lines in ``adapt_lines``.
+
+    ``overrides`` gives single lines a description of their own.
+    """
 
     def read(data: bytes) -> RawBatch | Unrecognised:
         if not data.startswith(b"FAKE"):
@@ -69,7 +77,7 @@ def make_source(
                         amount=money,
                         balance_after=balance,
                         currency="PLN",
-                        description=description,
+                        description=(overrides or {}).get(row.line_no, description),
                         country=None,
                         city=None,
                     ),
@@ -186,7 +194,7 @@ def test_reprocessing_an_unchanged_batch_changes_nothing_and_keeps_the_classific
 
     result = reprocess_batch(uow_factory, batch_id, sources=(source,))
 
-    assert (result.replaced, result.inserted) == (1, 0)
+    assert (result.replaced, result.unchanged, result.inserted) == (0, 1, 0)
     assert _state(uow_factory, batch_id) == ([(1, "X")], 2)
     with uow_factory() as uow:
         assert uow.classifications.current(transaction_id) is not None
@@ -199,11 +207,22 @@ def test_a_fixed_parser_updates_the_transactions_and_keeps_the_classification(
     transaction_id = _classify(uow_factory, batch_id)
     fixed = make_source(variant="a", description="NEW")
 
-    reprocess_batch(uow_factory, batch_id, sources=(fixed,))
+    result = reprocess_batch(uow_factory, batch_id, sources=(fixed,))
 
+    assert (result.replaced, result.unchanged, result.inserted) == (1, 0, 0)
     assert _state(uow_factory, batch_id)[0] == [(1, "NEW")]
     with uow_factory() as uow:
         assert uow.classifications.current(transaction_id) is not None
+
+
+def test_only_the_transactions_that_differ_are_counted_as_changed(uow_factory: UowFactory) -> None:
+    batch_id = _setup(uow_factory, make_source(variant="a", adapt_lines=(1, 2), description="X"))
+    fixed = make_source(variant="a", adapt_lines=(1, 2), description="X", overrides={2: "Y"})
+
+    result = reprocess_batch(uow_factory, batch_id, sources=(fixed,))
+
+    assert (result.replaced, result.unchanged, result.inserted) == (1, 1, 0)
+    assert _state(uow_factory, batch_id)[0] == [(1, "X"), (2, "Y")]
 
 
 def test_a_fix_that_would_change_an_id_is_refused_and_writes_nothing(
@@ -236,7 +255,7 @@ def test_a_row_that_now_yields_a_transaction_gets_one(uow_factory: UowFactory) -
 
     result = reprocess_batch(uow_factory, batch_id, sources=(reads_more,))
 
-    assert (result.replaced, result.inserted) == (1, 1)
+    assert (result.replaced, result.unchanged, result.inserted) == (0, 1, 1)
     assert _state(uow_factory, batch_id)[0] == [(1, "X"), (2, "X")]
 
 

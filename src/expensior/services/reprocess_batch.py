@@ -45,12 +45,17 @@ class IdsChangedError(ValueError):
 
 @dataclass(frozen=True)
 class ReprocessResult:
-    """What reprocessing does (``dry_run``) or did."""
+    """What reprocessing does (``dry_run``) or did.
+
+    ``replaced`` counts only the transactions that differ from the stored ones; the ones that come
+    out the same are ``unchanged`` and are not written.
+    """
 
     batch: ImportBatch
     format_version: str
     row_count: int
     replaced: int
+    unchanged: int
     inserted: int
     skipped_elsewhere: int
     holds: int
@@ -99,16 +104,18 @@ def reprocess_batch(
         if changed or vanished:
             raise IdsChangedError(changed, vanished)
 
-        in_batch = {t.transaction_id for t in stored.values()}
+        in_batch = {t.transaction_id: t for t in stored.values()}
         fresh = [t for t in incoming if t.transaction_id not in in_batch]
         elsewhere = uow.transactions.existing_ids([t.transaction_id for t in fresh])
         to_insert = [t for t in fresh if t.transaction_id not in elsewhere]
-        to_replace = [t for t in incoming if t.transaction_id in in_batch]
+        in_both = [t for t in incoming if t.transaction_id in in_batch]
+        to_replace = [t for t in in_both if t != in_batch[t.transaction_id]]
         result = ReprocessResult(
             batch=batch,
             format_version=identified.source.version,
             row_count=len(identified.batch.rows),
             replaced=len(to_replace),
+            unchanged=len(in_both) - len(to_replace),
             inserted=len(to_insert),
             skipped_elsewhere=len(fresh) - len(to_insert),
             holds=adapted.holds,

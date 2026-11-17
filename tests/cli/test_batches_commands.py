@@ -189,7 +189,8 @@ def _reprocess_result(dry_run: bool) -> ReprocessResult:
         batch=BATCH,
         format_version="enable_banking_pko_v1",
         row_count=2658,
-        replaced=2657,
+        replaced=3,
+        unchanged=2654,
         inserted=1,
         skipped_elsewhere=0,
         holds=0,
@@ -210,9 +211,9 @@ def test_reprocess_shows_the_plan_then_asks_and_runs(
 
     out = capsys.readouterr().out
     assert code == 0
-    assert "would update 2657 transactions, would add 1" in out
+    assert "would change 3 transactions, 2654 stay as they are, would add 1" in out
     assert (
-        out.index("would update") < out.index("Target database host") < out.index("is reprocessed")
+        out.index("would change") < out.index("Target database host") < out.index("is reprocessed")
     )
     assert [call[1].get("dry_run", False) for call in calls] == [True, False]
 

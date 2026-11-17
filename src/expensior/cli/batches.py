@@ -100,7 +100,8 @@ def _undo(args: argparse.Namespace, context: Context) -> int:
 def _describe_reprocess(result: ReprocessResult) -> list[str]:
     lines = [
         f"Batch {result.batch.id} read again as {result.format_version} ({result.row_count} rows): "
-        f"{'would update' if result.dry_run else 'updated'} {result.replaced} transactions, "
+        f"{'would change' if result.dry_run else 'changed'} {result.replaced} transactions, "
+        f"{result.unchanged} stay as they are, "
         f"{'would add' if result.dry_run else 'added'} {result.inserted}."
     ]
     if result.skipped_elsewhere:
