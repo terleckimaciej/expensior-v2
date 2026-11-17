@@ -64,21 +64,38 @@ class BankSession:
     accounts: tuple[BankAccount, ...]
 
 
-def _session(payload: dict[str, Any]) -> BankSession:
+def _session(payload: dict[str, Any], session_id: str | None = None) -> BankSession:
+    """A session from either of the API's two shapes of it.
+
+    Creating a session returns ``accounts`` as full objects and carries the ``session_id``.
+    Reading a session returns ``accounts`` as a list of ids, the ``uid`` and ``identification_hash``
+    of each in ``accounts_data``, and no ``session_id`` (the caller knows it).
+    """
     valid_until = (payload.get("access") or {}).get("valid_until")
-    accounts = tuple(
-        BankAccount(
-            uid=str(account["uid"]),
-            identification_hash=account.get("identification_hash"),
-            name=account.get("name"),
-            currency=account.get("currency"),
-            iban=(account.get("account_id") or {}).get("iban"),
-            details=account.get("details"),
+    listed = payload.get("accounts") or []
+    if listed and all(isinstance(account, dict) for account in listed):
+        accounts = tuple(
+            BankAccount(
+                uid=str(account["uid"]),
+                identification_hash=account.get("identification_hash"),
+                name=account.get("name"),
+                currency=account.get("currency"),
+                iban=(account.get("account_id") or {}).get("iban"),
+                details=account.get("details"),
+            )
+            for account in listed
         )
-        for account in payload.get("accounts") or []
-    )
+    else:
+        accounts = tuple(
+            BankAccount(
+                uid=str(account["uid"]),
+                identification_hash=account.get("identification_hash"),
+                name=None,
+            )
+            for account in payload.get("accounts_data") or []
+        )
     return BankSession(
-        session_id=str(payload["session_id"]),
+        session_id=str(payload.get("session_id") or session_id),
         valid_until=datetime.fromisoformat(valid_until) if valid_until else None,
         accounts=accounts,
     )
@@ -185,15 +202,21 @@ class EnableBankingClient:
 
     def get_session(self, session_id: str) -> BankSession:
         """A session as it is now, with the current account ids."""
-        return _session(self._request("GET", f"/sessions/{session_id}"))
+        return _session(self._request("GET", f"/sessions/{session_id}"), session_id)
 
     def fetch_transactions(
-        self, account_uid: str, *, date_from: date | None = None
+        self,
+        account_uid: str,
+        *,
+        date_from: date | None = None,
+        on_page: Callable[[int, int], None] | None = None,
     ) -> list[dict[str, Any]]:
         """The booked transactions of an account, as the API gives them, all pages.
 
         Without ``date_from`` the longest available history is fetched, which is what the first
         fetch after a new consent should do: the bank may later serve only the last 90 days.
+        ``on_page`` is told after each page the page's number and how many transactions there are
+        so far, so a slow fetch can show that it is alive.
         """
         params: dict[str, str] = {"transaction_status": "BOOK"}
         if date_from is None:
