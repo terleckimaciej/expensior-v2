@@ -1,7 +1,8 @@
 # Enable Banking and PKO BP — what the API returns, compared with the CSV
 
 - **Checked:** 2026-11-09 (spike [#12](https://github.com/terleckimaciej/expensior-v2/issues/12), run against the
-  owner's own PKO BP account). Re-verify anything you rely on if this is older than ~3 months.
+  owner's own PKO BP account); the inventory of fields and the other endpoints were checked on 2026-11-17 (see
+  "Complete inventory"). Re-verify anything you rely on if this is older than ~3 months.
 - Only aggregates and field names are recorded here. The raw responses stay on the owner's machine, outside the
   repository; production data never goes into issues, logs, fixtures or prompts (`AGENTS.md`).
 
@@ -81,10 +82,74 @@ Compared on the last three months of one account:
   from it on about 85% of rows, and the API has no such field.
 - **Holds:** the CSV contains `Blokada` rows (no operation date, balance "W rozliczeniu"). The same payment later
   appears as a booked row with a different type and date. The API returns booked transactions only.
-- **Description:** for card payments the API line equals the merchant part of the CSV "Lokalizacja: Adres:". The CSV
-  also has city and country as separate parts and a "Tytuł" that is only a reference code for cards; the API has
-  neither. For transfers the API line corresponds to the title or counterparty cells of the CSV.
+- **Description, card payments:** the first line of `remittance_information` is the city, the merchant and a
+  two-letter country code written together with no separator (in 215 of 218 card payments it fits that shape
+  exactly). The CSV keeps merchant, city and country name apart, so from the API the merchant cannot be told from
+  the city; a rule that looks for a phrase inside the description still matches.
+- **Description, transfers and standing orders:** the first line equals the CSV title, once whitespace is
+  collapsed (17 of 17 rows). For BLIK phone transfers the first line contains the CSV title and more text (8 of
+  11), so it is longer than the CSV description.
+- **Description, BLIK payments, tickets, refunds and currency exchange:** the first line is a reference number or
+  other text, and no other field of the transaction carries the merchant (searched in every field). Those
+  transactions (about 9% of the three months compared) have no merchant name from the API at all, while the CSV
+  has it.
+- **Type codes:** the eleven codes seen in the comparison map one to one to the CSV types (276 of 276). Four more
+  appear in the two-year history and not in the CSV window: `MOBILE-PAYMENT-POS-RETURN` (12), `CARD-FEE` (4),
+  `CARD-ATM` (3), `MOBILE-PAYMENT-ATM-TX-CODE` (1). They correspond by name to the legacy types `refund`,
+  `card_fee`, `atm_withdrawal` and `atm_withdrawal`; that mapping is inferred, not checked against a CSV.
+- **What follows:** the CSV is the richer source for descriptions (merchant, city, country), the API the fresher
+  one. A CSV imported with the conflict policy `replace` therefore enriches transactions the API created first.
 - **Encoding:** the CSV is `cp1250` (mojibake when read as UTF-8); the API is UTF-8.
+
+## Complete inventory (2026-11-17)
+
+Every key path of every stored raw row was scanned (3,391 rows, four accounts), not only the fields expected. The
+only paths that carry data:
+
+| Path | Rows | Note |
+|---|---|---|
+| `transaction_amount`, `balance_after_transaction`, `booking_date`, `credit_debit_indicator`, `status` | 3,391 | already in `transactions` |
+| `remittance_information` | 3,391 | line 1 description, line 2 operation type |
+| `transaction_id`, `entry_reference` | 3,391 | `transaction_id` is the Base64 encoding of `entry_reference`: no extra information |
+| `creditor.name`, `creditor_account.iban` | 132 | transfers; the payee of an outgoing transaction |
+| `debtor.name` | 152 | transfers; the payer of an incoming transaction |
+| `creditor.postal_address.address_line` / `debtor.postal_address.address_line` | 5 / 197 | one line of the counterparty's address |
+| `debtor_account.iban` | 2,784 | on outgoing rows this is **the owner's own account** |
+
+Every other path is empty on every row: `bank_transaction_code`, `merchant_category_code`, `value_date`,
+`transaction_date`, `exchange_rate`, `note`, `reference_number(_schema)`, both agents, `organisation_id`,
+`private_id`, contact details and the rest of the postal address (street, post code, town, country).
+
+- **The counterparty is chosen by direction:** `creditor` on a debit (`DBIT`), `debtor` on a credit (`CRDT`). The
+  other side is empty, or on card and BLIK payments it is the owner's own account, so "the first non-empty side"
+  returns the wrong party.
+- **Counterparty is filled for transfers only** (282 rows: outgoing, incoming, BLIK phone, standing orders).
+  Card payments, automatic savings, BLIK payments and refunds have no counterparty; their only text is
+  `remittance_information`.
+
+### Endpoints
+
+The [API reference](https://enablebanking.com/docs/api/reference/) lists, for account data, `GET
+/accounts/{id}/details`, `/balances`, `/transactions` and `/transactions/{transaction_id}`. The client uses only
+the transaction list. The other three were called once each on one account (read-only) and compared by field
+shape:
+
+- **A single transaction** returns the same fields as the list, plus `resource_id` (equal to `entry_reference`).
+  Nothing new; a BLIK terminal payment still has only a reference number. Tried on a card payment and a BLIK
+  terminal payment.
+- **Account details:** IBAN, BIC and name of the bank, the account's short description, usage, cash account type,
+  currency, `uid` and identification hash(es). Nothing for classification.
+- **Balances:** named balances with a type code. Not for classification; usable to reconcile the last
+  `balance_after_transaction` against the bank.
+
+### What is shared between banks
+
+Enable Banking normalises the **names and structure** of the fields for every bank, not what a bank puts in them.
+The documentation names what depends on the bank (the required `Psu-*` headers, whether the user picks accounts,
+history older than 90 days, whether an account has a `uid`) and does not say which transaction fields are filled.
+PKO leaves most of them empty and puts its own operation code in the second line of `remittance_information`
+instead of `bank_transaction_code`, so there is no standard code to map to. How much another bank fills can only
+be measured on that bank; the adapter is per source for that reason.
 
 ## Open
 
@@ -94,3 +159,6 @@ Compared on the last three months of one account:
   suggests the latter); the first fetch of a new session should therefore always use `strategy=longest` and keep the
   response.
 - Whether the terms cover accounts of other people (restricted mode is described as the owner's own accounts).
+- Whether the single-transaction endpoint returns more for other types (only a card payment and a BLIK terminal
+  payment were tried), and whether calling it per transaction counts against the background-fetch limit.
+- The part of the API reference after the account data endpoints (about the second half of the page) was not read.

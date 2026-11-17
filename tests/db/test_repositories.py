@@ -1,7 +1,7 @@
 """The repositories read and write domain records; classification history stays append-only."""
 
 from dataclasses import replace
-from datetime import date
+from datetime import UTC, date, datetime
 from decimal import Decimal
 
 import pytest
@@ -231,3 +231,15 @@ def test_replacing_a_transaction_keeps_its_classification_history(db_session: Se
     assert (loaded.description, loaded.city) == ("OTHER SHOP", "KRAKÓW")
     current = classifications.current(stored.transaction_id)
     assert current is not None and current.category_id == food.id
+
+
+def test_an_account_remembers_the_session_and_the_end_of_its_consent(db_session: Session) -> None:
+    accounts = AccountRepository(db_session)
+    account = accounts.add("main", "pko_bp")
+    valid_until = datetime(2027, 5, 1, 12, 0, tzinfo=UTC)
+
+    assert (account.bank_session_id, account.consent_valid_until) == (None, None)
+    updated = accounts.set_consent(account.id, "session-1", valid_until)
+
+    assert (updated.bank_session_id, updated.consent_valid_until) == ("session-1", valid_until)
+    assert accounts.get_by_name("main") == updated

@@ -37,8 +37,9 @@ src/expensior/
     models.py          #   SQLAlchemy 2.0 typed models
     session.py         #   engine and session factory, from config
     unit_of_work.py    #   one database transaction, exposing the repositories
-    repositories/      #   batches, raw_rows, transactions, categories, rules, classifications
+    repositories/      #   accounts, batches, raw_rows, transactions, categories, rules, classifications
     queries/           #   reads from the SQL views, returning domain.readmodels
+  bank/                # clients of bank APIs: network I/O, beside db, independent of it (ADR 0011)
   services/            # use cases; the only place that opens a transaction
   cli/                 # command-line entry point (`expensior ...`)
   ui/                  # added in the UI stage; framework-specific
@@ -124,6 +125,8 @@ Names are provisional and settle as the code is written; the responsibilities ar
 | `plan.py` | `plan_import` and `ImportPlan`: incoming transactions + existing ids + a `ConflictPolicy` (`ignore \| replace \| abort`, in `types.py`) → what would be inserted, replaced, skipped |
 | `source.py`, `registry.py` | a `Source` (how to read bytes into raw rows, how to adapt them) and the registry that finds the one that recognises the bytes; the import service knows no format, so the bank API is one more entry |
 | `pko_csv.py`, `transaction_types.py` | the PKO BP CSV source: a raw row → a transaction (or a hold, or an invalid row), and the type vocabulary of legacy |
+| `enable_banking.py` | the bank API source: a stored JSON document → one raw row per transaction → a transaction, mapped onto the same type vocabulary |
+| `adapted.py`, `values.py` | what every adapter returns (`Parsed`, `Hold`, `Invalid`, and `collect` to sum a statement up) and the shared reading of dates and amounts |
 
 **`domain/rules/`**: `conditions.py` (typed Pydantic conditions), `engine.py` (priority order, first match wins, only
 unclassified input), `validation.py` (a regex is validated when a rule is saved).
@@ -131,8 +134,10 @@ unclassified input), `validation.py` (a regex is validated when a rule is saved)
 **`db/`**: `repositories/` hold all SQL access (the legacy lesson: a repository layer from day one);
 `queries/` read the views; `unit_of_work.py` bundles one session with its repositories.
 
-**`services/`**: `import_statement`, `reprocess_batch`, `undo_batch`, `classify`, `reclassify` (manual and bulk),
-`categories`, `rules`, `transactions`, `dashboard`.
+**`services/`**: `import_statement`, `fetch_transactions`, `bank` (connect an account, fetch with it), `accounts`,
+`batches`, `reprocess_batch`, `undo_batch`, `classify`, `reclassify` (manual and bulk), `categories`, `rules`,
+`transactions`, `dashboard`. `runtime` builds what a command needs from the settings (the database, the bank
+client), so `cli` imports neither `db` nor `bank`.
 
 **`cli/`**: `main.py` (the `expensior` script, declared in `pyproject.toml`), one module per command group, and
 `confirm.py`, which prints the target database host and asks before any write (a rule in `AGENTS.md`).
@@ -201,6 +206,12 @@ container in CI), including the SQL views. `tests/cli/` — thin. Fixtures are s
   (`with UnitOfWork(session_factory) as uow: ...; uow.commit()`). Leaving the block without a commit, or with
   an exception, rolls back, so a forgotten commit never saves half the work. One unit of work is one database
   transaction; the import's two transactions (bytes first, rows after) are two successive blocks.
+- Settled in stage 2e: **reprocessing never moves a classification history to a new id.** Transactions are matched
+  to the rows of a batch by the raw row they point at. When a fix would change the id of a transaction, or make
+  one vanish, `reprocess_batch` refuses and writes nothing; the caller undoes the batch and imports it again,
+  knowing that the history of those transactions goes with it. A typical fix (a type, a description) does not
+  change the id, which is made of the date, the amount and the balance, so the case is rare, and moving a history
+  by itself is too risky for it. Undo deletes a batch's transactions and raw rows and keeps its bytes.
 - Open — to settle when the code exists, not now:
   - CLI library: the skeleton uses stdlib `argparse`; revisit if the commands multiply.
   - What `reprocess_batch` does when a corrected parser derives a different `transaction_id`.

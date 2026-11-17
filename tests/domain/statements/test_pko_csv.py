@@ -6,13 +6,8 @@ from decimal import Decimal
 from pko_samples import CSV_TEXT
 
 from expensior.domain.identity import transaction_id_for
-from expensior.domain.statements.adapted import Invalid
-from expensior.domain.statements.pko_csv import (
-    Hold,
-    Parsed,
-    adapt_row,
-    adapt_rows,
-)
+from expensior.domain.statements.adapted import Hold, Invalid, Parsed
+from expensior.domain.statements.pko_csv import adapt_row, adapt_rows
 from expensior.domain.statements.raw import RawRow, parse_raw
 
 ACCOUNT = 1

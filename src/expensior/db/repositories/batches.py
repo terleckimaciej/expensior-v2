@@ -66,6 +66,13 @@ class BatchRepository:
         )
         return [_record(row) for row in rows]
 
+    def list_all(self, account_id: int | None = None) -> list[ImportBatch]:
+        """All batches, or those of one account, oldest first."""
+        query = select(models.ImportBatch).order_by(models.ImportBatch.id)
+        if account_id is not None:
+            query = query.where(models.ImportBatch.account_id == account_id)
+        return [_record(row) for row in self._session.scalars(query)]
+
     def source_bytes(self, batch_id: int) -> bytes | None:
         """The original bytes of a batch; loaded on their own because they can be megabytes."""
         return self._session.scalar(

@@ -1,6 +1,6 @@
 """The classification history of transactions: append-only, one entry current. Never commits."""
 
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from expensior.db import models
@@ -61,6 +61,21 @@ class ClassificationRepository:
         self._session.add(row)
         self._session.flush()
         return _record(row)
+
+    def count_for_batch(self, batch_id: int) -> int:
+        """How many history entries the transactions of a batch have, current ones included."""
+        return (
+            self._session.scalar(
+                select(func.count())
+                .select_from(models.Classification)
+                .join(
+                    models.Transaction,
+                    models.Transaction.transaction_id == models.Classification.transaction_id,
+                )
+                .where(models.Transaction.raw_batch_id == batch_id)
+            )
+            or 0
+        )
 
     def current(self, transaction_id: TransactionId) -> Classification | None:
         row = self._session.scalar(

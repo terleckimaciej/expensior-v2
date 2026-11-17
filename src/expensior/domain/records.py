@@ -26,6 +26,8 @@ class Account:
     source: str
     external_ref: str | None
     currency: str
+    bank_session_id: str | None = None
+    consent_valid_until: datetime | None = None
 
 
 @dataclass(frozen=True)
