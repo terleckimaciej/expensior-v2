@@ -57,6 +57,13 @@ _ENABLE_BANKING_TYPES: dict[str, str] = {
     "CARD-FEE": "card_fee",
     "CARD-ATM": "atm_withdrawal",
     "MOBILE-PAYMENT-ATM-TX-CODE": "atm_withdrawal",
+    # Seen on the savings and foreign-currency accounts; matched by name only, like the four above.
+    "INTEREST": "interest_accrued",
+    "CREDIT": "pko_credit",
+    "DEBIT": "pko_charge",
+    "FEE": "bank_fee",
+    "TAX": "tax",
+    "CURRENCY-EXCHANGE-CREDIT": "currency_exchange_credit",
 }
 
 

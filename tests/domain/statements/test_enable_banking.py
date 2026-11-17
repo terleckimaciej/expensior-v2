@@ -117,6 +117,12 @@ def test_the_same_transaction_from_the_api_and_from_the_csv_has_the_same_id() ->
         ("CARD-ATM", "atm_withdrawal"),
         ("MOBILE-PAYMENT-ATM-TX-CODE", "atm_withdrawal"),
         ("AUTOSAVER", "auto_savings"),
+        ("INTEREST", "interest_accrued"),
+        ("CREDIT", "pko_credit"),
+        ("DEBIT", "pko_charge"),
+        ("FEE", "bank_fee"),
+        ("TAX", "tax"),
+        ("CURRENCY-EXCHANGE-CREDIT", "currency_exchange_credit"),
     ],
 )
 def test_the_codes_map_to_the_legacy_vocabulary(code: str, canonical: str) -> None:
