@@ -11,7 +11,7 @@ from datetime import date
 
 from expensior.cli.confirm import confirm
 from expensior.cli.context import Context
-from expensior.cli.output import describe_import
+from expensior.cli.output import describe_import, print_error
 from expensior.domain.consent import ConsentStatus
 from expensior.domain.types import ConflictPolicy
 from expensior.services.bank import (
@@ -62,11 +62,6 @@ def register(subparsers: "argparse._SubParsersAction[argparse.ArgumentParser]") 
     fetch.set_defaults(handler=_fetch)
 
 
-def _error(message: str) -> int:
-    print(f"error: {message}", file=sys.stderr)
-    return 1
-
-
 def _label(bank_account: BankAccount) -> str:
     if bank_account.iban:
         known_by = f"account ...{bank_account.iban[-4:]}"  # as the bank's own app shows it
@@ -103,7 +98,7 @@ def _name_accounts(described: list[SessionAccount], context: Context) -> list[Li
 def _connect(args: argparse.Namespace, context: Context) -> int:
     runtime = context.runtime()
     if not runtime.redirect_url:
-        return _error(
+        return print_error(
             "set ENABLE_BANKING_REDIRECT_URL to the address registered for the application"
         )
     try:
@@ -127,7 +122,7 @@ def _connect(args: argparse.Namespace, context: Context) -> int:
             return 1
         results = link_accounts(runtime.uow_factory, session, links)
     except (BankConfigError, BankApiError, StateMismatchError, ValueError) as error:
-        return _error(str(error))
+        return print_error(str(error))
     valid_until = session.valid_until
     until = f", consent until {valid_until:%Y-%m-%d}" if valid_until else ""
     print(f"Linked {len(results)} account(s){until}.")
@@ -172,13 +167,13 @@ def _fetch_one(
         )
     except (AccountNotFoundError, NotConnectedError) as error:
         progress.finish()
-        return _error(f"{error}; connect it with: expensior bank connect")
+        return print_error(f"{error}; connect it with: expensior bank connect")
     except ConsentExpiredError as error:
         progress.finish()
-        return _error(f"{error}; renew it with: expensior bank connect")
+        return print_error(f"{error}; renew it with: expensior bank connect")
     except BankApiError as error:
         progress.finish()
-        return _error(str(error))
+        return print_error(str(error))
     progress.finish()
     for line in describe_import(outcome.result):
         print(line)
@@ -195,14 +190,14 @@ def _fetch(args: argparse.Namespace, context: Context) -> int:
     try:
         client = runtime.bank_client()
     except BankConfigError as error:
-        return _error(str(error))
+        return print_error(str(error))
     names = (
         [args.account]
         if args.account
         else [a.name for a in connected_accounts(runtime.uow_factory)]
     )
     if not names:
-        return _error(
+        return print_error(
             "no account is connected to the bank; connect one with: expensior bank connect"
         )
     if not args.dry_run and not confirm(

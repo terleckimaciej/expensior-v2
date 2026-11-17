@@ -68,3 +68,29 @@ are linked already. `bank fetch` takes every connected account, or one, `bank fe
 Take the first fetch soon after approving: for about an hour the bank serves the whole history, later often
 only the last 90 days. Every command that writes prints the target database host and asks first (`--yes` skips
 the question).
+
+## Importing a file, undoing and reprocessing an import
+
+A statement file (a PKO BP CSV) is the second source, for history older than the bank gives and for what the API
+leaves out (the merchant of a BLIK payment, the city of a card payment).
+
+```bash
+uv run expensior import statement.csv --account main --dry-run   # the plan, nothing written
+uv run expensior import statement.csv --account main             # import it
+uv run expensior import statement.csv --account main --on-conflict replace   # also fill in what the API lacked
+uv run expensior batches                                         # the imports made, with their numbers
+uv run expensior undo 4 --dry-run                                # what undoing import 4 would remove
+uv run expensior undo 4                                          # remove its transactions, keep its bytes
+uv run expensior reprocess 4                                     # derive its transactions again from the bytes
+```
+
+A CSV does not say which account it belongs to: `--account` names it, and without it the only account is used. An
+account that does not exist yet is created on the first import, after asking. The same transaction from the CSV and
+from the API is stored once; `--on-conflict` says what to do when it is already there (`ignore` keeps it, `replace`
+overwrites its fields and keeps its classification, `abort` stops).
+
+`undo` shows what goes first: the transactions of the import, their raw rows and their classification history. The
+original bytes stay, so the import can be looked at, reprocessed or made again. `reprocess` reads those bytes again
+after a parser, a decoder or the type mapping was fixed, instead of fetching from the bank again; it updates the
+transactions and never touches their classification history. If a fix would change a transaction's id, it refuses
+and writes nothing: undo the import and import it again, knowing that the history of those transactions goes with it.

@@ -86,6 +86,15 @@ def _result(
     )
 
 
+def _imported_before(uow: UnitOfWork, sha256: str) -> tuple[int, ...]:
+    """The batches with the same content that still stand: an undone batch is not one."""
+    return tuple(
+        batch.id
+        for batch in uow.batches.find_by_sha256(sha256)
+        if batch.status is ImportStatus.IMPORTED
+    )
+
+
 def _account(uow: UnitOfWork, name: str) -> Account:
     account = uow.accounts.get_by_name(name)
     if account is None:
@@ -112,7 +121,7 @@ def _dry_run(
     """Read the account and the stored ids, and return the plan; nothing is written."""
     with uow_factory() as uow:
         account = _account(uow, account_name)
-        already = tuple(batch.id for batch in uow.batches.find_by_sha256(sha256))
+        already = _imported_before(uow, sha256)
         if isinstance(identified, Unrecognised):
             return _result(
                 dry_run=True,
@@ -171,7 +180,7 @@ def import_statement(
     # Transaction 1: the original bytes and the batch, before anything is parsed further.
     with uow_factory() as uow:
         account = _account(uow, account_name)
-        already = tuple(batch.id for batch in uow.batches.find_by_sha256(sha256))
+        already = _imported_before(uow, sha256)
         source_name = (
             identified.source.source if isinstance(identified, Identified) else account.source
         )

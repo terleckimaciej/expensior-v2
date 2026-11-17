@@ -4,7 +4,7 @@ import argparse
 from collections.abc import Sequence
 
 from expensior import __version__
-from expensior.cli import accounts, bank
+from expensior.cli import accounts, bank, batches, import_file
 from expensior.cli.context import Context
 
 
@@ -18,6 +18,8 @@ def build_parser() -> argparse.ArgumentParser:
     commands = parser.add_subparsers(dest="command", metavar="COMMAND")
     accounts.register(commands)
     bank.register(commands)
+    import_file.register(commands)
+    batches.register(commands)
     return parser
 
 

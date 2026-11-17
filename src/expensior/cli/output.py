@@ -1,5 +1,6 @@
 """How a command reports an import to the terminal: counts and names, never transaction contents."""
 
+import sys
 from datetime import datetime
 
 from expensior.domain.consent import ConsentStatus, consent_status, days_left
@@ -7,6 +8,12 @@ from expensior.domain.records import Account
 from expensior.services.import_statement import ImportResult
 
 _SHOWN_INVALID = 5
+
+
+def print_error(message: str) -> int:
+    """Print ``error: ...`` on stderr and return the exit code of a failed command."""
+    print(f"error: {message}", file=sys.stderr)
+    return 1
 
 
 def describe_import(result: ImportResult) -> list[str]:

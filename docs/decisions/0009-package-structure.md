@@ -135,7 +135,7 @@ unclassified input), `validation.py` (a regex is validated when a rule is saved)
 `queries/` read the views; `unit_of_work.py` bundles one session with its repositories.
 
 **`services/`**: `import_statement`, `fetch_transactions`, `bank` (connect an account, fetch with it), `accounts`,
-`reprocess_batch`, `undo_batch`, `classify`, `reclassify` (manual and bulk), `categories`, `rules`,
+`batches`, `reprocess_batch`, `undo_batch`, `classify`, `reclassify` (manual and bulk), `categories`, `rules`,
 `transactions`, `dashboard`. `runtime` builds what a command needs from the settings (the database, the bank
 client), so `cli` imports neither `db` nor `bank`.
 
@@ -206,6 +206,12 @@ container in CI), including the SQL views. `tests/cli/` — thin. Fixtures are s
   (`with UnitOfWork(session_factory) as uow: ...; uow.commit()`). Leaving the block without a commit, or with
   an exception, rolls back, so a forgotten commit never saves half the work. One unit of work is one database
   transaction; the import's two transactions (bytes first, rows after) are two successive blocks.
+- Settled in stage 2e: **reprocessing never moves a classification history to a new id.** Transactions are matched
+  to the rows of a batch by the raw row they point at. When a fix would change the id of a transaction, or make
+  one vanish, `reprocess_batch` refuses and writes nothing; the caller undoes the batch and imports it again,
+  knowing that the history of those transactions goes with it. A typical fix (a type, a description) does not
+  change the id, which is made of the date, the amount and the balance, so the case is rare, and moving a history
+  by itself is too risky for it. Undo deletes a batch's transactions and raw rows and keeps its bytes.
 - Open — to settle when the code exists, not now:
   - CLI library: the skeleton uses stdlib `argparse`; revisit if the commands multiply.
   - What `reprocess_batch` does when a corrected parser derives a different `transaction_id`.

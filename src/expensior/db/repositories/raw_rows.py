@@ -8,10 +8,14 @@ stage 2.
 from collections.abc import Iterable, Mapping
 from typing import Any
 
-from sqlalchemy import func, insert, select
+from sqlalchemy import delete, func, insert, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
 from expensior.db import models
+
+# Rows per statement: each carries three bind parameters, and Postgres allows 65535 in one.
+_CHUNK = 5000
 
 
 class RawRowRepository:
@@ -46,4 +50,36 @@ class RawRowRepository:
                 .where(models.RawRow.batch_id == batch_id)
             )
             or 0
+        )
+
+    def delete_for_batch(self, batch_id: int) -> int:
+        """Delete the rows of a batch; the transactions that point at them must be gone first."""
+        result = self._session.execute(
+            delete(models.RawRow).where(models.RawRow.batch_id == batch_id)
+        )
+        return int(getattr(result, "rowcount", 0) or 0)
+
+    def sync_batch(self, batch_id: int, rows: Iterable[tuple[int, Mapping[str, Any]]]) -> None:
+        """Make the stored rows of a batch match ``rows``, read again from the stored bytes.
+
+        Cells are updated, new lines are added, lines no longer in ``rows`` are dropped. A line a
+        transaction points at must be among the given ones, or the database refuses the delete.
+        """
+        values = [
+            {"batch_id": batch_id, "line_no": line_no, "cells": dict(cells)}
+            for line_no, cells in rows
+        ]
+        for start in range(0, len(values), _CHUNK):
+            statement = pg_insert(models.RawRow).values(values[start : start + _CHUNK])
+            self._session.execute(
+                statement.on_conflict_do_update(
+                    index_elements=["batch_id", "line_no"],
+                    set_={"cells": statement.excluded.cells},
+                )
+            )
+        kept = [value["line_no"] for value in values]
+        self._session.execute(
+            delete(models.RawRow).where(
+                models.RawRow.batch_id == batch_id, models.RawRow.line_no.not_in(kept)
+            )
         )

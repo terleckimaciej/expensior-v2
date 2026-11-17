@@ -4,7 +4,7 @@ from collections.abc import Collection, Iterable, Sequence
 from dataclasses import asdict
 from typing import Any
 
-from sqlalchemy import insert, select, update
+from sqlalchemy import delete, func, insert, select, update
 from sqlalchemy.orm import Session
 
 from expensior.db import models
@@ -76,3 +76,29 @@ class TransactionRepository:
     def get(self, transaction_id: TransactionId) -> Transaction | None:
         row = self._session.get(models.Transaction, transaction_id)
         return _record(row) if row else None
+
+    def for_batch(self, batch_id: int) -> list[Transaction]:
+        """The transactions that point at a raw row of the batch, by line."""
+        rows = self._session.scalars(
+            select(models.Transaction)
+            .where(models.Transaction.raw_batch_id == batch_id)
+            .order_by(models.Transaction.raw_line_no)
+        )
+        return [_record(row) for row in rows]
+
+    def count_for_batch(self, batch_id: int) -> int:
+        return (
+            self._session.scalar(
+                select(func.count())
+                .select_from(models.Transaction)
+                .where(models.Transaction.raw_batch_id == batch_id)
+            )
+            or 0
+        )
+
+    def delete_for_batch(self, batch_id: int) -> int:
+        """Delete the batch's transactions (and, by cascade, their classification history)."""
+        result = self._session.execute(
+            delete(models.Transaction).where(models.Transaction.raw_batch_id == batch_id)
+        )
+        return int(getattr(result, "rowcount", 0) or 0)
